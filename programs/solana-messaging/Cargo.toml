@@ -1,0 +1,21 @@
+[package]
+name = "solana-messaging"
+version = "0.1.0"
+description = "Solana NFT Messaging Program"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "solana_messaging"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.28.0"
+anchor-spl = "0.28.0"
+mpl-token-metadata = "3.2.1"

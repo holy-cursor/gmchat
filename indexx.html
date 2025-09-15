@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnChain Messages</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#faf5ff',
+                            100: '#f3e8ff',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Roboto Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .message-card {
+            transition: all 0.3s ease;
+        }
+        .message-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .modal-open {
+            overflow: hidden;
+        }
+        .slide-in {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body class="font-sans bg-gray-50 min-h-screen flex flex-col">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-primary-700 rounded-lg"></div>
+                <span class="text-xl font-bold text-gray-800">OnChain Messages</span>
+            </div>
+
+            <!-- Navigation -->
+            <div class="hidden md:flex space-x-6">
+                <button id="inboxTab" class="font-medium text-primary-600 border-b-2 border-primary-600 px-1 pb-1">Inbox</button>
+                <button id="outboxTab" class="font-medium text-gray-500 hover:text-gray-700 px-1 pb-1">Outbox</button>
+            </div>
+
+            <!-- Wallet & Settings -->
+            <div class="flex items-center space-x-3">
+                <button id="connectWallet" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Connect Wallet
+                </button>
+                <div class="relative">
+                    <button class="p-2 rounded-full hover:bg-gray-100">
+                        <i data-feather="settings" class="w-5 h-5 text-gray-600"></i>
+                    </button>
+                    <div class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-20 hidden" id="settingsDropdown">
+                        <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                            <i data-feather="help-circle" class="w-4 h-4 mr-2"></i>
+                            Help
+                        </button>
+                        <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center" id="aboutButton">
+                            <i data-feather="info" class="w-4 h-4 mr-2"></i>
+                            About
+                        </button>
+                        <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                            <i data-feather="moon" class="w-4 h-4 mr-2"></i>
+                            Dark Mode
+                        </button>
+                        <button class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center">
+                            <i data-feather="log-out" class="w-4 h-4 mr-2"></i>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation -->
+    <div class="md:hidden bg-white border-b border-gray-200 px-4 py-2 flex justify-center">
+        <div class="flex space-x-8">
+            <button id="mobileInboxTab" class="font-medium text-primary-600 border-b-2 border-primary-600 px-1 pb-1">Inbox</button>
+            <button id="mobileOutboxTab" class="font-medium text-gray-500 hover:text-gray-700 px-1 pb-1">Outbox</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-4xl w-full mx-auto px-4 py-6">
+        <!-- Inbox View -->
+        <div id="inboxView">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Inbox</h2>
+                <p class="text-gray-500">Messages sent to your wallet</p>
+            </div>
+
+            <div id="inboxMessages" class="space-y-4">
+                <!-- Empty state -->
+                <div id="emptyInbox" class="text-center py-12 px-4 rounded-lg bg-white border border-dashed border-gray-300">
+                    <i data-feather="inbox" class="w-12 h-12 text-gray-300 mx-auto"></i>
+                    <h3 class="mt-4 text-lg font-medium text-gray-700">No messages yet</h3>
+                    <p class="mt-2 text-gray-500">When someone sends you a message, it will appear here.</p>
+                </div>
+
+                <!-- Message cards would be dynamically inserted here -->
+            </div>
+        </div>
+
+        <!-- Outbox View -->
+        <div id="outboxView" class="hidden">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Outbox</h2>
+                <p class="text-gray-500">Messages you've sent</p>
+            </div>
+
+            <div id="outboxMessages" class="space-y-4">
+                <!-- Empty state -->
+                <div id="emptyOutbox" class="text-center py-12 px-4 rounded-lg bg-white border border-dashed border-gray-300">
+                    <i data-feather="send" class="w-12 h-12 text-gray-300 mx-auto"></i>
+                    <h3 class="mt-4 text-lg font-medium text-gray-700">No sent messages</h3>
+                    <p class="mt-2 text-gray-500">Messages you send will appear here.</p>
+                </div>
+
+                <!-- Message cards would be dynamically inserted here -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Message Composer -->
+    <div class="bg-white border-t border-gray-200 px-4 py-4 sticky bottom-0">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3">
+                <input type="text" placeholder="Recipient wallet address" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm" id="recipientInput">
+                <div class="flex-1 flex space-x-3">
+                    <input type="text" placeholder="Write a message..." class="flex-1 px-4 py-3 border border-gray-300 rounded-lg" id="messageInput">
+                    <button id="sendMessage" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center">
+                        <i data-feather="send" class="w-5 h-5 mr-2"></i>
+                        Send
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Detail Modal -->
+    <div id="messageModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-end opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white w-full max-w-md h-full transform translate-x-full transition-transform duration-300 overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">Message</h3>
+                    <button id="closeModal" class="p-2 rounded-full hover:bg-gray-100">
+                        <i data-feather="x" class="w-5 h-5 text-gray-600"></i>
+                    </button>
+                </div>
+
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <p id="modalMessage" class="text-gray-700"></p>
+                </div>
+
+                <div class="space-y-4 text-sm text-gray-600">
+                    <div class="flex justify-between">
+                        <span>From:</span>
+                        <span id="modalSender" class="font-mono"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>To:</span>
+                        <span id="modalRecipient" class="font-mono"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Date:</span>
+                        <span id="modalDate"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>NFT ID:</span>
+                        <span id="modalNftId" class="font-mono"></span>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex space-x-3">
+                    <button class="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center">
+                        <i data-feather="corner-up-left" class="w-4 h-4 mr-2"></i>
+                        Reply
+                    </button>
+                    <button class="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center">
+                        <i data-feather="external-link" class="w-4 h-4 mr-2"></i>
+                        View on Explorer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Notification -->
+    <div id="successNotification" class="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg shadow-lg transform translate-y-[-100px] transition-transform duration-300 z-50">
+        <div class="flex items-center">
+            <i data-feather="check-circle" class="w-5 h-5 mr-2"></i>
+            <span>Message sent successfully!</span>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white rounded-xl max-w-md w-full mx-4 transform scale-95 transition-transform duration-300">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-800">About OnChain Messages</h3>
+                    <button id="closeAboutModal" class="p-2 rounded-full hover:bg-gray-100">
+                        <i data-feather="x" class="w-5 h-5 text-gray-600"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4 text-gray-700">
+                    <p>This web app is a simple and seamless way to send and receive onchain messages as NFTs on Solana.</p>
+                    
+                    <p><strong>Core idea:</strong> Every message is minted as an NFT and transferred directly to the recipient's wallet.</p>
+                    
+                    <p><strong>Why it's different:</strong> No signups, no hidden costs — just connect your wallet and start messaging.</p>
+                    
+                    <p><strong>Gas-only model:</strong> Sending messages only costs Solana network gas fees.</p>
+                    
+                    <p><strong>Transparency:</strong> Messages are permanent onchain and tied to wallet addresses.</p>
+                    
+                    <div class="pt-4 border-t border-gray-200">
+                        <p class="text-sm text-gray-500">Built by: 0xSaint</p>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end">
+                    <button id="closeAboutButton" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                        Got it
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize libraries
+        AOS.init();
+        feather.replace();
+
+        // Settings dropdown toggle
+        settingsButton.addEventListener('click', () => {
+            settingsDropdown.classList.toggle('hidden');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!settingsButton.contains(e.target) && !settingsDropdown.contains(e.target)) {
+                settingsDropdown.classList.add('hidden');
+            }
+        });
+
+        // About modal functionality
+        function openAboutModal() {
+            document.body.classList.add('modal-open');
+            aboutModal.classList.remove('pointer-events-none');
+            aboutModal.classList.add('pointer-events-auto');
+            aboutModal.classList.remove('opacity-0');
+            aboutModal.classList.add('opacity-100');
+            
+            setTimeout(() => {
+                aboutModal.querySelector('.transform').classList.remove('scale-95');
+                aboutModal.querySelector('.transform').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeAboutModalFunc() {
+            aboutModal.querySelector('.transform').classList.add('scale-95');
+            aboutModal.querySelector('.transform').classList.remove('scale-100');
+            
+            setTimeout(() => {
+                aboutModal.classList.remove('opacity-100');
+                aboutModal.classList.add('opacity-0');
+                aboutModal.classList.remove('pointer-events-auto');
+                aboutModal.classList.add('pointer-events-none');
+                document.body.classList.remove('modal-open');
+            }, 300);
+        }
+
+        aboutButton.addEventListener('click', () => {
+            settingsDropdown.classList.add('hidden');
+            openAboutModal();
+        });
+
+        closeAboutModal.addEventListener('click', closeAboutModalFunc);
+        closeAboutButton.addEventListener('click', closeAboutModalFunc);
+
+        // DOM Elements
+        const inboxTab = document.getElementById('inboxTab');
+        const outboxTab = document.getElementById('outboxTab');
+        const mobileInboxTab = document.getElementById('mobileInboxTab');
+        const mobileOutboxTab = document.getElementById('mobileOutboxTab');
+        const inboxView = document.getElementById('inboxView');
+        const outboxView = document.getElementById('outboxView');
+        const connectWalletBtn = document.getElementById('connectWallet');
+        const messageModal = document.getElementById('messageModal');
+        const closeModalBtn = document.getElementById('closeModal');
+        const sendMessageBtn = document.getElementById('sendMessage');
+        const recipientInput = document.getElementById('recipientInput');
+        const messageInput = document.getElementById('messageInput');
+        const successNotification = document.getElementById('successNotification');
+        const settingsButton = document.querySelector('header button:nth-child(2)');
+        const settingsDropdown = document.getElementById('settingsDropdown');
+        const aboutButton = document.getElementById('aboutButton');
+        const aboutModal = document.getElementById('aboutModal');
+        const closeAboutModal = document.getElementById('closeAboutModal');
+        const closeAboutButton = document.getElementById('closeAboutButton');
+
+        // Tab switching functionality
+        function switchToInbox() {
+            inboxView.classList.remove('hidden');
+            outboxView.classList.add('hidden');
+            inboxTab.classList.add('text-primary-600', 'border-primary-600');
+            inboxTab.classList.remove('text-gray-500');
+            outboxTab.classList.add('text-gray-500');
+            outboxTab.classList.remove('text-primary-600', 'border-primary-600');
+            mobileInboxTab.classList.add('text-primary-600', 'border-primary-600');
+            mobileInboxTab.classList.remove('text-gray-500');
+            mobileOutboxTab.classList.add('text-gray-500');
+            mobileOutboxTab.classList.remove('text-primary-600', 'border-primary-600');
+        }
+
+        function switchToOutbox() {
+            outboxView.classList.remove('hidden');
+            inboxView.classList.add('hidden');
+            outboxTab.classList.add('text-primary-600', 'border-primary-600');
+            outboxTab.classList.remove('text-gray-500');
+            inboxTab.classList.add('text-gray-500');
+            inboxTab.classList.remove('text-primary-600', 'border-primary-600');
+            mobileOutboxTab.classList.add('text-primary-600', 'border-primary-600');
+            mobileOutboxTab.classList.remove('text-gray-500');
+            mobileInboxTab.classList.add('text-gray-500');
+            mobileInboxTab.classList.remove('text-primary-600', 'border-primary-600');
+        }
+
+        inboxTab.addEventListener('click', switchToInbox);
+        outboxTab.addEventListener('click', switchToOutbox);
+        mobileInboxTab.addEventListener('click', switchToInbox);
+        mobileOutboxTab.addEventListener('click', switchToOutbox);
+
+        // Modal functionality
+        function openModal() {
+            document.body.classList.add('modal-open');
+            messageModal.classList.remove('pointer-events-none');
+            messageModal.classList.add('pointer-events-auto');
+            messageModal.classList.remove('opacity-0');
+            messageModal.classList.add('opacity-100');
+            
+            setTimeout(() => {
+                messageModal.querySelector('.transform').classList.remove('translate-x-full');
+                messageModal.querySelector('.transform').classList.add('slide-in');
+            }, 10);
+        }
+
+        function closeModal() {
+            messageModal.querySelector('.transform').classList.add('translate-x-full');
+            messageModal.querySelector('.transform').classList.remove('slide-in');
+            
+            setTimeout(() => {
+                messageModal.classList.remove('opacity-100');
+                messageModal.classList.add('opacity-0');
+                messageModal.classList.remove('pointer-events-auto');
+                messageModal.classList.add('pointer-events-none');
+                document.body.classList.remove('modal-open');
+            }, 300);
+        }
+
+        closeModalBtn.addEventListener('click', closeModal);
+
+        // Simulate message sending
+        sendMessageBtn.addEventListener('click', () => {
+            const recipient = recipientInput.value.trim();
+            const message = messageInput.value.trim();
+            
+            if (!recipient || !message) return;
+            
+            // Simulate transaction
+            sendMessageBtn.disabled = true;
+            sendMessageBtn.innerHTML = '<i data-feather="loader" class="w-5 h-5 mr-2 animate-spin"></i> Sending...';
+            feather.replace();
+            
+            setTimeout(() => {
+                // Show success notification
+                successNotification.classList.remove('translate-y-[-100px]');
+                successNotification.classList.add('translate-y-0');
+                
+                // Reset form
+                recipientInput.value = '';
+                messageInput.value = '';
+                sendMessageBtn.disabled = false;
+                sendMessageBtn.innerHTML = '<i data-feather="send" class="w-5 h-5 mr-2"></i> Send';
+                feather.replace();
+                
+                // Hide notification after 3 seconds
+                setTimeout(() => {
+                    successNotification.classList.remove('translate-y-0');
+                    successNotification.classList.add('translate-y-[-100px]');
+                }, 3000);
+            }, 2000);
+        });
+
+        // Wallet connection simulation
+        connectWalletBtn.addEventListener('click', () => {
+            connectWalletBtn.textContent = 'Connected';
+            connectWalletBtn.classList.remove('bg-primary-600', 'hover:bg-primary-700');
+            connectWalletBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            
+            // Hide empty states and show sample messages
+            document.getElementById('emptyInbox').classList.add('hidden');
+            document.getElementById('emptyOutbox').classList.add('hidden');
+            
+            // Add sample inbox message
+            const inboxMessages = document.getElementById('inboxMessages');
+            inboxMessages.innerHTML += `
+                <div class="message-card bg-white rounded-lg border border-gray-200 p-4 shadow-sm cursor-pointer" onclick="openModal()" data-aos="fade-up">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-8 h-8 bg-gradient-to-r from-primary-500 to-primary-700 rounded-full"></div>
+                                <span class="font-medium text-gray-800">0x8a17...c3d2</span>
+                            </div>
+                            <p class="mt-2 text-gray-600 text-sm">Hey there! Just testing out this new messaging system. How's it going?</p>
+                        </div>
+                        <span class="text-xs text-gray-500">2 hours ago</span>
+                    </div>
+                </div>
+            `;
+            
+            // Add sample outbox message
+            const outboxMessages = document.getElementById('outboxMessages');
+            outboxMessages.innerHTML += `
+                <div class="message-card bg-white rounded-lg border border-gray-200 p-4 shadow-sm cursor-pointer" onclick="openModal()" data-aos="fade-up">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="text-xs text-gray-500">To:</span>
+                                <span class="font-mono text-xs text-gray-700">0x5f32...a9b1</span>
+                            </div>
+                            <p class="mt-1 text-gray-600 text-sm">Welcome to OnChain Messages! This is your first sent message.</p>
+                        </div>
+                        <span class="text-xs text-gray-500">5 min ago</span>
+                    </div>
+                </div>
+            `;
+            
+            feather.replace();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "build"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/static/(.*)",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "REACT_APP_SOLANA_RPC_URL": "@react_app_solana_rpc_url",
+    "REACT_APP_SOLANA_NETWORK": "@react_app_solana_network",
+    "REACT_APP_RECAPTCHA_SITE_KEY": "@react_app_recaptcha_site_key"
+  }
+}

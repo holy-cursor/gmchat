@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .message-card {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .message-card:hover {
+    @apply transform -translate-y-0.5 shadow-lg;
+  }
+  
+  .modal-open {
+    @apply overflow-hidden;
+  }
+  
+  .slide-in {
+    @apply transform translate-x-0;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
