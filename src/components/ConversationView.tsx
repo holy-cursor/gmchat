@@ -310,13 +310,13 @@ const ConversationView: React.FC<ConversationViewProps> = ({
                     }`}>
                       {formatTime(message.timestamp)}
                     </span>
-                    {message.nftMint && (
+                    {message.transactionSignature && (
                       <button
-                        onClick={() => copyToClipboard(message.nftMint!, 'nft')}
+                        onClick={() => copyToClipboard(message.transactionSignature!, 'tx')}
                         className={`ml-2 p-1 rounded ${
                           isFromCurrentUser ? 'hover:bg-purple-700' : 'hover:bg-gray-200'
                         }`}
-                        title="Copy NFT ID"
+                        title="Copy Transaction ID"
                       >
                         <ExternalLink className="w-3 h-3" />
                       </button>

@@ -3,7 +3,6 @@ import React, { useEffect } from 'react';
 interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
-  nftMint: string;
   transactionSignature: string;
   recipientAddress: string;
   messageContent: string;

@@ -1,38 +1,40 @@
-# OnChain Messages - Solana NFT Messaging Web App
+# Parc3l - Decentralized Messaging on Solana
 
-A lightweight web application that enables users to send messages as NFTs on the Solana blockchain. Each message is minted as an NFT and transferred directly to the recipient's wallet, ensuring permanence and portability.
+A modern, secure messaging application built on Solana blockchain. Parc3l enables direct wallet-to-wallet communication with group chats, end-to-end encryption, and advanced security features.
 
 ## Features
 
 - 🔗 **Wallet Integration**: Connect with Phantom, Solflare, Backpack, and other Solana wallets
-- 💬 **NFT Messaging**: Send messages as NFTs with onchain metadata
-- 📥 **Inbox/Outbox**: View received and sent messages
-- 💰 **Gas-Only Model**: Only pay Solana network fees, no platform charges
-- 🛡️ **CAPTCHA Protection**: Built-in spam protection
-- 📱 **Responsive Design**: Works on desktop and mobile devices
+- 💬 **Direct Messaging**: Send encrypted messages with SOL transfers for permanence
+- 👥 **Group Chats**: Create and manage group conversations with multiple participants
+- 🔐 **End-to-End Encryption**: AES-256 encryption for all messages
+- 🛡️ **Security Features**: Rate limiting, spam prevention, CAPTCHA protection
+- 🏷️ **Contact Management**: Custom tags and contact organization
+- 📱 **Responsive Design**: Modern UI that works on all devices
+- 🌙 **Dark Mode**: Beautiful dark and light themes
 
 ## Tech Stack
 
 - **Frontend**: React 18 + TypeScript + Tailwind CSS
-- **Blockchain**: Solana Web3.js + Anchor Framework
-- **Wallet Integration**: Solana Wallet Adapter
-- **NFT Metadata**: Metaplex Token Metadata
-- **Storage**: IPFS/Bundlr for metadata storage
+- **Blockchain**: Solana Web3.js + Wallet Adapter
+- **Encryption**: AES-256 with CryptoJS
+- **Storage**: Local Storage (client-side)
+- **Security**: Rate limiting, content validation, CAPTCHA
+- **UI/UX**: Modern responsive design with dark mode
 - **Deployment**: Vercel/Netlify ready
 
 ## Prerequisites
 
 - Node.js 16+ and npm/yarn
-- Solana CLI tools
-- Anchor Framework
 - A Solana wallet (Phantom, Solflare, etc.)
+- Devnet SOL for testing (get free SOL from [faucet.solana.com](https://faucet.solana.com))
 
 ## Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd solana-nft-messaging
+   git clone https://github.com/YOUR_USERNAME/parc3l.git
+   cd parc3l
    ```
 
 2. **Install dependencies**
@@ -42,68 +44,45 @@ A lightweight web application that enables users to send messages as NFTs on the
    yarn install
    ```
 
-3. **Get a free Shyft API key**
-   - Go to [https://shyft.to](https://shyft.to)
-   - Sign up for a free account
-   - Get your API key from the dashboard
-
-4. **Set up environment variables**
-   ```bash
-   cp env.example .env.local
-   ```
-   
-   Edit `.env.local` with your configuration:
-   ```env
-   REACT_APP_SOLANA_RPC_URL=https://api.devnet.solana.com
-   REACT_APP_SOLANA_NETWORK=devnet
-   REACT_APP_RECAPTCHA_SITE_KEY=your_recaptcha_site_key_here
-   ```
-
-4. **Set up Solana program (optional for development)**
-   ```bash
-   # Install Anchor
-   npm install -g @coral-xyz/anchor-cli
-   
-   # Build the program
-   anchor build
-   
-   # Deploy to devnet
-   anchor deploy
-   ```
-
-## Development
-
-1. **Start the development server**
+3. **Start the development server**
    ```bash
    npm start
    # or
    yarn start
    ```
 
-2. **Open your browser**
+4. **Open your browser**
    Navigate to `http://localhost:3000`
-
-3. **Connect your wallet**
-   - Click "Connect Wallet" in the header
-   - Select your preferred wallet (Phantom, Solflare, etc.)
-   - Approve the connection
 
 ## Usage
 
-### Sending Messages
+### Getting Started
 
 1. **Connect your wallet** using the "Connect Wallet" button
-2. **Enter recipient address** in the recipient field
-3. **Type your message** (up to 500 characters)
-4. **Click "Send"** to mint the message as an NFT and transfer it
-5. **Pay gas fees** when prompted by your wallet
+2. **Get devnet SOL** from [faucet.solana.com](https://faucet.solana.com) for testing
+3. **Start messaging** by selecting a contact or creating a group
 
-### Receiving Messages
+### Sending Messages
 
-1. **Connect your wallet** to view your inbox
-2. **Messages appear automatically** in the Inbox tab
-3. **Click on any message** to view full details
-4. **Use the Outbox tab** to see messages you've sent
+1. **Select a contact** from the contact list or create a new message
+2. **Type your message** (up to 500 characters)
+3. **Click "Send"** to send with SOL transfer (0.001 SOL + gas fees)
+4. **Complete CAPTCHA** for security verification
+5. **Confirm transaction** in your wallet
+
+### Group Chats
+
+1. **Click the "+" button** in the groups section
+2. **Add group members** by entering their wallet addresses
+3. **Create the group** and start messaging
+4. **Manage members** by clicking the people icon in group chats
+
+### Security Features
+
+- **Rate Limiting**: Prevents spam (10 messages/minute, 100/hour, 500/day)
+- **Content Validation**: Blocks malicious content and excessive caps
+- **CAPTCHA Protection**: Prevents automated spam
+- **Address Flagging**: Report and block suspicious addresses
 
 ## Project Structure
 
@@ -111,26 +90,25 @@ A lightweight web application that enables users to send messages as NFTs on the
 src/
 ├── components/          # React components
 │   ├── Header.tsx      # Navigation and wallet connection
-│   ├── Inbox.tsx       # Received messages view
-│   ├── Outbox.tsx      # Sent messages view
-│   ├── MessageCard.tsx # Individual message display
-│   ├── MessageComposer.tsx # Message creation form
-│   ├── MessageModal.tsx # Message detail modal
-│   ├── AboutModal.tsx  # About information
-│   └── Captcha.tsx     # CAPTCHA integration
+│   ├── ContactList.tsx # Contact and group list
+│   ├── ConversationView.tsx # Message display and input
+│   ├── CreateGroupModal.tsx # Group creation
+│   ├── GroupMembersModal.tsx # Group member management
+│   ├── ContactTagModal.tsx # Contact tagging
+│   ├── CaptchaModal.tsx # Security verification
+│   ├── PrivacySettings.tsx # Privacy controls
+│   └── SecurityIndicator.tsx # Security status
 ├── contexts/           # React contexts
-│   └── WalletContext.tsx # Wallet state management
+│   ├── WalletContext.tsx # Wallet state management
+│   └── ThemeContext.tsx # Dark/light theme
 ├── services/           # Business logic
-│   └── solana.ts      # Solana blockchain interactions
+│   ├── messageStorage.ts # Local data storage
+│   ├── encryptionService.ts # Message encryption
+│   ├── securityService.ts # Rate limiting & validation
+│   └── solana.ts      # Blockchain interactions
 ├── types/             # TypeScript type definitions
 │   └── index.ts       # Shared types
 └── App.tsx            # Main application component
-
-programs/
-└── solana-messaging/  # Anchor Solana program
-    ├── src/
-    │   └── lib.rs     # Program logic
-    └── Cargo.toml     # Rust dependencies
 ```
 
 ## Configuration
@@ -212,11 +190,14 @@ For support and questions:
 
 ## Roadmap
 
-- [ ] Message encryption support
-- [ ] Group messaging capabilities
+- [x] Message encryption support
+- [x] Group messaging capabilities
+- [x] Contact management and tagging
+- [x] Security features (rate limiting, CAPTCHA)
 - [ ] Message search and filtering
-- [ ] Custom NFT images for messages
+- [ ] File sharing capabilities
 - [ ] Message reactions and replies
+- [ ] Push notifications
 - [ ] Integration with other Solana dApps
 
 ---

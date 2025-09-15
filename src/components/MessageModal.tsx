@@ -105,14 +105,14 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
             </div>
             
             <div className="flex justify-between items-center">
-              <span>NFT ID:</span>
+              <span>Transaction ID:</span>
               <div className="flex items-center space-x-2">
-                <span className="font-mono text-xs">{formatAddress(message.nftMint || 'N/A')}</span>
+                <span className="font-mono text-xs">{formatAddress(message.transactionSignature || 'N/A')}</span>
                 <button
-                  onClick={() => copyToClipboard(message.nftMint || 'N/A', 'nft')}
+                  onClick={() => copyToClipboard(message.transactionSignature || 'N/A', 'tx')}
                   className="p-1 hover:bg-gray-200 rounded transition-colors"
                 >
-                  {copiedField === 'nft' ? (
+                  {copiedField === 'tx' ? (
                     <Check className="w-3 h-3 text-green-600" />
                   ) : (
                     <Copy className="w-3 h-3" />

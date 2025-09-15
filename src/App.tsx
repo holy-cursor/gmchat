@@ -7,7 +7,7 @@ import AboutModal from './components/AboutModal';
 import SuccessModal from './components/SuccessModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Message, Contact, Conversation, Group } from './types';
-import { shyftNFTService } from './services/shyftNFTService';
+// Removed NFT service import - using direct SOL transfers
 import { MessageStorageService, StoredMessage } from './services/messageStorage';
 import SecurityService from './services/securityService';
 import EncryptionService from './services/encryptionService';
@@ -29,7 +29,6 @@ function AppContent() {
   const [isContactTagModalOpen, setIsContactTagModalOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [successData, setSuccessData] = useState<{
-    nftMint: string;
     transactionSignature: string;
     recipientAddress: string;
     messageContent: string;
@@ -250,15 +249,12 @@ function AppContent() {
         }
         
         // Store the group message (sent to group wallet)
-        const mockMint = Keypair.generate().publicKey.toString();
-        
         MessageStorageService.storeMessage({
           sender: publicKey.toString(),
           recipient: selectedGroup.groupWallet,
           content: content,
           messageType: 'text',
           transactionSignature: signature,
-          nftMint: mockMint,
         });
         
         // Reload the group conversation
@@ -276,69 +272,7 @@ function AppContent() {
     }
   }, [selectedContact, selectedGroup, publicKey]);
 
-  // Real NFT creation using Metaplex UMI
-  const createMessageNFT = async (recipientAddress: string, content: string) => {
-    try {
-      if (!connected || !publicKey) {
-        throw new Error('Please connect your wallet first');
-      }
-
-      // Get the wallet adapter from useWallet
-      const wallet = (window as any).solana || (window as any).phantom?.solana;
-      if (!wallet) {
-        throw new Error('Wallet not found');
-      }
-
-      // Use the Shyft NFT service to create the message NFT
-      const nftResult = await shyftNFTService.mintMessageNFT(
-        { publicKey, signTransaction, connected } as any,
-        recipientAddress,
-        content,
-        'text'
-      );
-
-      // Also create a SOL transfer as a backup/verification
-      const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-      const recipientPubkey = new PublicKey(recipientAddress);
-      
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: recipientPubkey,
-          lamports: 100000, // 0.0001 SOL
-        })
-      );
-
-      const { blockhash } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-
-      if (!signTransaction) {
-        throw new Error('Wallet does not support transaction signing');
-      }
-      
-      const signedTransaction = await signTransaction(transaction);
-      const transferSignature = await connection.sendRawTransaction(signedTransaction.serialize());
-      
-      return {
-        mint: nftResult.mint,
-        signature: nftResult.signature,
-        transferSignature: transferSignature,
-        metadataUri: nftResult.metadataUri,
-        transaction: {
-          from: publicKey.toString(),
-          to: recipientAddress,
-          amount: 0.0001,
-          message: content,
-          timestamp: Date.now(),
-        },
-      };
-      
-    } catch (error) {
-      console.error('Error creating NFT:', error);
-      throw new Error(`Failed to create NFT: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
+  // Removed unused NFT creation function - using direct SOL transfers instead
 
   // Removed unused message modal functions
 
@@ -533,9 +467,6 @@ function AppContent() {
         throw new Error(`Transaction failed: ${confirmation.value.err}`);
       }
 
-      // Create mock NFT data
-      const mockMint = Keypair.generate().publicKey.toString();
-      
       // Store the encrypted message
       MessageStorageService.storeEncryptedMessage({
         sender: publicKey.toString(),
@@ -543,7 +474,6 @@ function AppContent() {
         content: content,
         messageType: 'text',
         transactionSignature: signature,
-        nftMint: mockMint,
       }, publicKey.toString(), recipient);
 
       // Record the message attempt for rate limiting
@@ -560,7 +490,6 @@ function AppContent() {
 
       // Show success modal with transaction details
       setSuccessData({
-        nftMint: mockMint,
         transactionSignature: signature,
         recipientAddress: recipient,
         messageContent: content
@@ -696,7 +625,6 @@ function AppContent() {
               console.log('Closing success modal');
               setIsSuccessModalOpen(false);
             }}
-            nftMint={successData.nftMint}
             transactionSignature={successData.transactionSignature}
             recipientAddress={successData.recipientAddress}
             messageContent={successData.messageContent}

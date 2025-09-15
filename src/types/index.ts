@@ -3,9 +3,8 @@ export interface Message {
   sender: string;
   recipient: string;
   content: string;
-   messageType: 'text' | 'image' | 'file';
+  messageType: 'text' | 'image' | 'file';
   timestamp: number;
-  nftMint?: string;
   transactionSignature: string;
   isRead?: boolean;
   groupId?: string; // For group messages

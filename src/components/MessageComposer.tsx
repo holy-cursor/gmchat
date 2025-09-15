@@ -36,20 +36,20 @@ const MessageComposer: React.FC = () => {
     setIsSending(true);
 
     try {
-      toast.loading('Minting message NFT...', { id: 'sending' });
+      toast.loading('Sending message...', { id: 'sending' });
       
       // Create a temporary keypair for the transaction
       // In a real implementation, you'd use the connected wallet's keypair
       const senderKeypair = Keypair.generate();
       
-      // Mint the message as an NFT
+      // Send the message with SOL transfer (using existing NFT method for now)
       const result = await solanaService.mintMessageNFT(
         senderKeypair,
         data.recipient,
         data.content
       );
       
-      toast.success(`Message sent! NFT: ${result.mint.slice(0, 8)}...`, { id: 'sending' });
+      toast.success(`Message sent! Tx: ${result.signature.slice(0, 8)}...`, { id: 'sending' });
       reset();
     } catch (error) {
       console.error('Error sending message:', error);

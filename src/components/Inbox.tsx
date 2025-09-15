@@ -33,7 +33,7 @@ const Inbox: React.FC<InboxProps> = ({ onMessageSelect, isConnected }) => {
         content: item.content || 'Message content unavailable',
         messageType: 'text' as const,
         timestamp: item.timestamp || Date.now(),
-        nftMint: item.mint,
+        // Removed nftMint - using transaction signature instead
         transactionSignature: item.account,
         isRead: false,
       }));

@@ -33,7 +33,7 @@ const Outbox: React.FC<OutboxProps> = ({ onMessageSelect, isConnected }) => {
         content: item.content || 'Message content would be here',
         messageType: 'text' as const,
         timestamp: item.timestamp || Date.now(),
-        nftMint: item.mint || 'Unknown',
+        // Removed nftMint - using transaction signature instead
         transactionSignature: item.signature,
         isRead: true,
       }));
