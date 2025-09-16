@@ -231,7 +231,7 @@ export class MessageStorageService {
 
       const contact = contactMap.get(contactAddress)!;
       
-      // Update last activity
+      // Update last activity and last message
       if (message.timestamp > contact.lastActivity) {
         contact.lastActivity = message.timestamp;
         contact.lastMessage = message;
@@ -240,6 +240,20 @@ export class MessageStorageService {
       // Count unread messages (only received messages that are unread)
       if (isReceived && !message.isRead) {
         contact.unreadCount++;
+      }
+    });
+
+    // After processing all messages, ensure each contact has the correct last message
+    // by getting the most recent message in each conversation
+    contactMap.forEach((contact, contactAddress) => {
+      const conversationMessages = allMessages.filter(message => 
+        (message.sender === walletAddress && message.recipient === contactAddress) ||
+        (message.sender === contactAddress && message.recipient === walletAddress)
+      ).sort((a, b) => b.timestamp - a.timestamp); // Most recent first
+
+      if (conversationMessages.length > 0) {
+        contact.lastMessage = conversationMessages[0]; // Most recent message
+        contact.lastActivity = conversationMessages[0].timestamp;
       }
     });
 
