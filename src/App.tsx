@@ -409,119 +409,158 @@ function AppContent() {
     console.log('Starting encrypted message send process...');
     setIsSending(true);
     setLastTransactionTime(Date.now());
+
+    // Retry mechanism for Solflare wallet issues
+    let retryCount = 0;
+    const maxRetries = 3;
     
-    try {
-      console.log('Checking wallet balance...');
-      // Check wallet balance first
-      const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-      const balance = await connection.getBalance(publicKey);
-      const balanceInSOL = balance / 1000000000; // Convert lamports to SOL
-      console.log('Wallet balance:', balanceInSOL, 'SOL');
-      
-      if (balance < 2000000) { // Need at least 0.002 SOL (for transaction + fees)
-        console.log('Insufficient balance');
-        alert(`Insufficient balance!\n\nYour balance: ${balanceInSOL.toFixed(6)} SOL\nRequired: 0.002 SOL\n\nPlease get more devnet SOL from: https://faucet.solana.com/`);
-        return;
-      }
-      
-      console.log('Validating recipient address:', recipient);
-      // Validate recipient address
+    while (retryCount < maxRetries) {
       try {
-        new PublicKey(recipient);
-        console.log('Address validation passed');
-      } catch (error) {
-        console.error('Address validation error:', error);
-        console.error('Address being validated:', recipient);
-        alert(`Invalid recipient address! Please check the address format.\n\nAddress: ${recipient}\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        return;
-      }
-      
-      // Create a simple SOL transfer
-      const recipientPubkey = new PublicKey(recipient);
-      
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: recipientPubkey,
-          lamports: 1000000, // 0.001 SOL
-        })
-      );
-
-      // Get fresh blockhash to prevent duplicate transactions
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-      transaction.recentBlockhash = blockhash;
-      transaction.feePayer = publicKey;
-
-      // Sign and send transaction
-      const signedTransaction = await signTransaction!(transaction);
-      const signature = await connection.sendRawTransaction(signedTransaction.serialize());
-      
-      // Wait for confirmation with timeout
-      const confirmation = await connection.confirmTransaction({
-        signature,
-        blockhash,
-        lastValidBlockHeight
-      }, 'confirmed');
-      
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${confirmation.value.err}`);
-      }
-
-      // Store the encrypted message
-      MessageStorageService.storeEncryptedMessage({
-        sender: publicKey.toString(),
-        recipient: recipient,
-        content: content,
-        messageType: 'text',
-        transactionSignature: signature,
-      }, publicKey.toString(), recipient);
-
-      // Record the message attempt for rate limiting
-      SecurityService.recordMessageAttempt(publicKey.toString());
-
-      // Reload contacts to show the new sent message
-      await loadContacts();
-
-      // If we're in a conversation with this recipient, reload the conversation
-      if (selectedContact && selectedContact.address === recipient) {
-        const updatedConversation = MessageStorageService.getConversation(publicKey.toString(), recipient);
-        setCurrentConversation(updatedConversation);
-      }
-
-      // Show success modal with transaction details
-      setSuccessData({
-        transactionSignature: signature,
-        recipientAddress: recipient,
-        messageContent: content
-      });
-      setIsSuccessModalOpen(true);
-      
-      // Clear the form
-      setRecipientAddress('');
-      setMessageContent('');
-      
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      // Handle specific Solana errors
-      if (error instanceof Error) {
-        if (error.message.includes('already been processed') || error.message.includes('already processed')) {
-          alert('Transaction already processed. Please wait a moment and try again.');
-        } else if (error.message.includes('insufficient funds')) {
-          alert('Insufficient SOL balance. Please add more SOL to your wallet.');
-        } else if (error.message.includes('User rejected') || error.message.includes('rejected')) {
-          alert('Transaction was cancelled by user.');
-        } else if (error.message.includes('simulation failed')) {
-          alert('Transaction simulation failed. Please check your wallet balance and try again.');
-        } else {
-          alert(`Failed to send message: ${error.message}`);
+        console.log(`Attempt ${retryCount + 1} of ${maxRetries}...`);
+        
+        console.log('Checking wallet balance...');
+        // Check wallet balance first
+        const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+        const balance = await connection.getBalance(publicKey);
+        const balanceInSOL = balance / 1000000000; // Convert lamports to SOL
+        console.log('Wallet balance:', balanceInSOL, 'SOL');
+        
+        if (balance < 2000000) { // Need at least 0.002 SOL (for transaction + fees)
+          console.log('Insufficient balance');
+          alert(`Insufficient balance!\n\nYour balance: ${balanceInSOL.toFixed(6)} SOL\nRequired: 0.002 SOL\n\nPlease get more devnet SOL from: https://faucet.solana.com/`);
+          return;
         }
-      } else {
-        alert('Failed to send message: Unknown error');
+        
+        console.log('Validating recipient address:', recipient);
+        // Validate recipient address
+        try {
+          new PublicKey(recipient);
+          console.log('Address validation passed');
+        } catch (error) {
+          console.error('Address validation error:', error);
+          console.error('Address being validated:', recipient);
+          alert(`Invalid recipient address! Please check the address format.\n\nAddress: ${recipient}\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          return;
+        }
+        
+        // Create a simple SOL transfer
+        const recipientPubkey = new PublicKey(recipient);
+        
+        // Add a small random amount to make each transaction unique (helps with Solflare caching)
+        const randomAmount = Math.floor(Math.random() * 1000); // 0-999 lamports
+        const totalAmount = 1000000 + randomAmount; // 0.001 SOL + small random amount
+        
+        const transaction = new Transaction().add(
+          SystemProgram.transfer({
+            fromPubkey: publicKey,
+            toPubkey: recipientPubkey,
+            lamports: totalAmount,
+          })
+        );
+
+        // Get fresh blockhash to prevent duplicate transactions
+        // Use 'finalized' commitment for better reliability with Solflare
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+        transaction.recentBlockhash = blockhash;
+        transaction.feePayer = publicKey;
+
+        // Add a small delay to ensure blockhash is fresh (helps with Solflare)
+        await new Promise(resolve => setTimeout(resolve, 100 + (retryCount * 200))); // Increasing delay with retries
+
+        // Sign and send transaction
+        const signedTransaction = await signTransaction!(transaction);
+        const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+      
+        // Wait for confirmation with timeout
+        const confirmation = await connection.confirmTransaction({
+          signature,
+          blockhash,
+          lastValidBlockHeight
+        }, 'confirmed');
+        
+        if (confirmation.value.err) {
+          throw new Error(`Transaction failed: ${confirmation.value.err}`);
+        }
+
+        // Store the encrypted message
+        MessageStorageService.storeEncryptedMessage({
+          sender: publicKey.toString(),
+          recipient: recipient,
+          content: content,
+          messageType: 'text',
+          transactionSignature: signature,
+        }, publicKey.toString(), recipient);
+
+        // Record the message attempt for rate limiting
+        SecurityService.recordMessageAttempt(publicKey.toString());
+
+        // Reload contacts to show the new sent message
+        await loadContacts();
+
+        // If we're in a conversation with this recipient, reload the conversation
+        if (selectedContact && selectedContact.address === recipient) {
+          const updatedConversation = MessageStorageService.getConversation(publicKey.toString(), recipient);
+          setCurrentConversation(updatedConversation);
+        }
+
+        // Show success modal with transaction details
+        setSuccessData({
+          transactionSignature: signature,
+          recipientAddress: recipient,
+          messageContent: content
+        });
+        setIsSuccessModalOpen(true);
+        
+        // Clear the form
+        setRecipientAddress('');
+        setMessageContent('');
+        
+        // Success! Break out of retry loop
+        break;
+        
+      } catch (error) {
+        console.error(`Attempt ${retryCount + 1} failed:`, error);
+        
+        // Check if this is a retryable error
+        const isRetryableError = error instanceof Error && (
+          error.message.includes('already been processed') ||
+          error.message.includes('already processed') ||
+          error.message.includes('TransactionExpiredBlockheightExceededError') ||
+          error.message.includes('BlockhashNotFound')
+        );
+        
+        if (isRetryableError && retryCount < maxRetries - 1) {
+          retryCount++;
+          console.log(`Retrying in ${1000 + (retryCount * 500)}ms...`);
+          await new Promise(resolve => setTimeout(resolve, 1000 + (retryCount * 500)));
+          continue;
+        }
+        
+        // Handle specific Solana errors
+        if (error instanceof Error) {
+          if (error.message.includes('already been processed') || error.message.includes('already processed')) {
+            alert('Transaction already processed. This can happen with Solflare wallet. Please wait a moment and try again, or refresh the page.');
+          } else if (error.message.includes('insufficient funds')) {
+            alert('Insufficient SOL balance. Please add more SOL to your wallet.');
+          } else if (error.message.includes('User rejected') || error.message.includes('rejected')) {
+            alert('Transaction was cancelled by user.');
+          } else if (error.message.includes('simulation failed')) {
+            alert('Transaction simulation failed. Please check your wallet balance and try again.');
+          } else if (error.message.includes('TransactionExpiredBlockheightExceededError')) {
+            alert('Transaction expired. Please try again with a fresh transaction.');
+          } else if (error.message.includes('BlockhashNotFound')) {
+            alert('Blockhash not found. Please try again - this sometimes happens with Solflare.');
+          } else {
+            alert(`Failed to send message: ${error.message}`);
+          }
+        } else {
+          alert('Failed to send message: Unknown error');
+        }
+        break;
       }
-    } finally {
-      setIsSending(false);
     }
+    
+    setIsSending(false);
   };
 
 
