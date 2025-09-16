@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Keypair, Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { EVMWalletProvider, useEVMWallet } from './contexts/EVMWalletContext';
 import Header from './components/Header';
 import AboutModal from './components/AboutModal';
 import SuccessModal from './components/SuccessModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Message, Contact, Conversation, Group } from './types';
+import { BlockchainType } from './components/BlockchainSelector';
 // Removed NFT service import - using direct SOL transfers
 import { MessageStorageService, StoredMessage } from './services/messageStorage';
 import SecurityService from './services/securityService';
@@ -18,11 +20,17 @@ import ContactTagModal from './components/ContactTagModal';
 import CreateGroupModal from './components/CreateGroupModal';
 import GroupMembersModal from './components/GroupMembersModal';
 import CaptchaModal from './components/CaptchaModal';
+import BlockchainSelector from './components/BlockchainSelector';
+import EVMMessageComposer from './components/EVMMessageComposer';
 
 function AppContent() {
   const { connected, publicKey, signTransaction } = useWallet();
   const { isDark } = useTheme();
+  const evmWallet = useEVMWallet();
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  
+  // Blockchain selection state
+  const [selectedBlockchain, setSelectedBlockchain] = useState<BlockchainType>('solana');
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
@@ -57,7 +65,11 @@ function AppContent() {
 
   // Load contacts and groups for the connected wallet
   const loadContacts = useCallback(async () => {
-    if (!publicKey) {
+    const walletAddress = selectedBlockchain === 'solana' 
+      ? publicKey?.toString() 
+      : evmWallet.address;
+      
+    if (!walletAddress) {
       setContacts([]);
       setGroups([]);
       setCurrentConversation(null);
@@ -67,8 +79,7 @@ function AppContent() {
 
     setIsLoadingContacts(true);
     try {
-      const walletAddress = publicKey.toString();
-      const contactsList = MessageStorageService.getContacts(walletAddress);
+      const contactsList = MessageStorageService.getContacts(walletAddress, selectedBlockchain);
       const groupsList = MessageStorageService.getGroupsForWallet(walletAddress);
       const unreadCount = MessageStorageService.getTotalUnreadCount(walletAddress);
       
@@ -88,7 +99,7 @@ function AppContent() {
     } finally {
       setIsLoadingContacts(false);
     }
-  }, [publicKey, selectedContact]);
+  }, [publicKey, evmWallet.address, selectedBlockchain, selectedContact]);
 
   // Load contacts when wallet connects/disconnects
   useEffect(() => {
@@ -395,6 +406,41 @@ function AppContent() {
     setIsCaptchaModalOpen(true);
   };
 
+  // EVM message sending handler
+  const handleEVMMessage = async (recipient: string, content: string, chainId: number) => {
+    if (!evmWallet.isConnected) {
+      alert('Please connect your EVM wallet first');
+      return;
+    }
+
+    try {
+      // This would use the actual EVM service when ethers.js is installed
+      // For now, we'll simulate the transaction
+      const mockTransactionHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+      
+      // Store the EVM message
+      MessageStorageService.storeMessage({
+        sender: evmWallet.address!,
+        recipient: recipient,
+        content: content,
+        messageType: 'text',
+        transactionSignature: mockTransactionHash,
+        chainType: 'evm',
+        chainId: chainId,
+      });
+
+      // Reload contacts to show the new message
+      await loadContacts();
+
+      // Show success message
+      alert(`EVM message sent! Transaction: ${mockTransactionHash.slice(0, 10)}...`);
+      
+    } catch (error) {
+      console.error('Failed to send EVM message:', error);
+      alert('Failed to send EVM message. Please try again.');
+    }
+  };
+
   const handleCaptchaVerify = async (success: boolean) => {
     if (!success || !pendingMessage || !publicKey || !signTransaction) {
       setPendingMessage(null);
@@ -577,6 +623,21 @@ function AppContent() {
           onNewMessage={() => setIsNewMessageModalOpen(true)}
         />
         
+        {/* Blockchain Selector */}
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="max-w-md mx-auto">
+            <label className={`block text-sm font-medium mb-2 ${
+              isDark ? 'text-gray-300' : 'text-gray-700'
+            }`}>
+              Select Blockchain
+            </label>
+            <BlockchainSelector
+              selectedBlockchain={selectedBlockchain}
+              onBlockchainSelect={setSelectedBlockchain}
+            />
+          </div>
+        </div>
+        
         <main className={`flex-1 flex max-w-7xl mx-auto w-full shadow-2xl rounded-t-3xl overflow-hidden ${
           isDark ? 'bg-gray-800' : 'bg-white'
         }`}>
@@ -614,6 +675,14 @@ function AppContent() {
               onDeleteGroup={handleDeleteGroup}
               onOpenGroupMembers={handleOpenGroupMembers}
             />
+            
+            {/* EVM Message Composer - Show when EVM is selected and in conversation */}
+            {selectedBlockchain === 'evm' && currentConversation && (
+              <EVMMessageComposer
+                onSendMessage={handleEVMMessage}
+                isSending={isSending}
+              />
+            )}
           </div>
         </main>
 
@@ -689,7 +758,9 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <EVMWalletProvider>
+        <AppContent />
+      </EVMWalletProvider>
     </ThemeProvider>
   );
 }

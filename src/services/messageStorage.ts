@@ -193,7 +193,7 @@ export class MessageStorageService {
   /**
    * Get all contacts for a wallet (people they've messaged with)
    */
-  static getContacts(walletAddress: string): Contact[] {
+  static getContacts(walletAddress: string, chainType?: 'solana' | 'evm'): Contact[] {
     const allMessages = this.getAllMessages();
     const contactMap = new Map<string, Contact>();
 
@@ -202,6 +202,11 @@ export class MessageStorageService {
     const groupWallets = allGroups.map(group => group.groupWallet);
 
     allMessages.forEach(message => {
+      // Filter by chain type if specified
+      if (chainType && message.chainType && message.chainType !== chainType) {
+        return;
+      }
+
       let contactAddress: string;
       let isReceived = false;
 
