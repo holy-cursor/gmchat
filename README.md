@@ -90,6 +90,7 @@ A modern, secure messaging application built on Solana blockchain. Parc3l enable
 src/
 ├── components/          # React components
 │   ├── Header.tsx      # Navigation and wallet connection
+
 │   ├── ContactList.tsx # Contact and group list
 │   ├── ConversationView.tsx # Message display and input
 │   ├── CreateGroupModal.tsx # Group creation

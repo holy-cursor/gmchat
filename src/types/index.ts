@@ -11,6 +11,9 @@ export interface Message {
   isEncrypted?: boolean;
   encryptedContent?: string;
   encryptionKey?: string;
+  // EVM support
+  chainType?: 'solana' | 'evm';
+  chainId?: number; // For EVM messages
 }
 
 export interface MessageMetadata {

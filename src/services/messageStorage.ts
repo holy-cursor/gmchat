@@ -252,8 +252,30 @@ export class MessageStorageService {
       ).sort((a, b) => b.timestamp - a.timestamp); // Most recent first
 
       if (conversationMessages.length > 0) {
-        contact.lastMessage = conversationMessages[0]; // Most recent message
-        contact.lastActivity = conversationMessages[0].timestamp;
+        const lastMessage = conversationMessages[0];
+        
+        // Decrypt the message content if it's encrypted
+        if (lastMessage.isEncrypted && lastMessage.encryptedContent) {
+          try {
+            const decryptedContent = EncryptionService.decryptMessageData(
+              lastMessage as any,
+              walletAddress,
+              contactAddress
+            );
+            // Create a copy of the message with decrypted content
+            contact.lastMessage = {
+              ...lastMessage,
+              content: decryptedContent
+            };
+          } catch (error) {
+            console.error('Failed to decrypt last message for contact:', error);
+            contact.lastMessage = lastMessage; // Use original message if decryption fails
+          }
+        } else {
+          contact.lastMessage = lastMessage;
+        }
+        
+        contact.lastActivity = lastMessage.timestamp;
       }
     });
 
