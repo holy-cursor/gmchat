@@ -1,448 +1,450 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
-import { Keypair, Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
-import { EVMWalletProvider, useEVMWallet } from './contexts/EVMWalletContext';
-import Header from './components/Header';
+import { BaseMiniAppProvider } from './contexts/BaseMiniAppContext';
+import { useAccount } from 'wagmi';
+import { WalletType } from './components/BaseMiniAppWallet';
+import BaseMiniAppHeader from './components/BaseMiniAppHeader';
+import BaseMiniAppWallet from './components/BaseMiniAppWallet';
 import AboutModal from './components/AboutModal';
 import SuccessModal from './components/SuccessModal';
 import ErrorBoundary from './components/ErrorBoundary';
-import { Message, Contact, Conversation, Group } from './types';
-import { BlockchainType } from './components/BlockchainSelector';
-// Removed NFT service import - using direct SOL transfers
-import { MessageStorageService, StoredMessage } from './services/messageStorage';
-import SecurityService from './services/securityService';
-import EncryptionService from './services/encryptionService';
+import { Contact, Conversation } from './types';
+import { MessageStorageService } from './services/messageStorage';
+import HybridDatabaseService from './services/hybridDatabaseService';
 import ContactList from './components/ContactList';
-import ConversationView from './components/ConversationView';
+import BaseMiniAppConversationView from './components/BaseMiniAppConversationView';
 import NewMessageModal from './components/NewMessageModal';
+import AddContactModal from './components/AddContactModal';
 import ContactTagModal from './components/ContactTagModal';
-import CreateGroupModal from './components/CreateGroupModal';
-import GroupMembersModal from './components/GroupMembersModal';
 import CaptchaModal from './components/CaptchaModal';
-import BlockchainSelector from './components/BlockchainSelector';
-import EVMMessageComposer from './components/EVMMessageComposer';
+import MiniAppModeIndicator from './components/MiniAppModeIndicator';
+// import DatabaseTest from './components/DatabaseTest';
+import './utils/ipfsTest'; // Load IPFS test utility
+import { toast } from 'react-hot-toast';
+import './App.css'; // Import modern iMessage-inspired styling
 
 function AppContent() {
-  const { connected, publicKey, signTransaction } = useWallet();
   const { isDark } = useTheme();
-  const evmWallet = useEVMWallet();
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const { address: evmAddress, isConnected: evmConnected, chainId: evmChainId } = useAccount();
+  const [selectedWalletType, setSelectedWalletType] = useState<WalletType>('base');
   
-  // Blockchain selection state
-  const [selectedBlockchain, setSelectedBlockchain] = useState<BlockchainType>('solana');
+  // Debug EVM wallet state
+  React.useEffect(() => {
+    console.log('EVM Wallet State Changed:', {
+      evmAddress,
+      evmConnected,
+      evmChainId,
+      selectedWalletType
+    });
+  }, [evmAddress, evmConnected, evmChainId, selectedWalletType]);
+
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [useHybridMode, setUseHybridMode] = useState(true); // Enable hybrid mode by default for cross-device sync
+  const [ultraLowCostMode, setUltraLowCostMode] = useState(false); // Database-only mode (no blockchain)
+  
+  // Modal state
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
+  const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [isContactTagModalOpen, setIsContactTagModalOpen] = useState(false);
-  const [editingContact, setEditingContact] = useState<Contact | null>(null);
-  const [successData, setSuccessData] = useState<{
-    transactionSignature: string;
-    recipientAddress: string;
-    messageContent: string;
-  } | null>(null);
-  
-  // Message composer state
-  const [recipientAddress, setRecipientAddress] = useState('');
-  const [messageContent, setMessageContent] = useState('');
+  const [contactToTag, setContactToTag] = useState<Contact | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [lastTransactionTime, setLastTransactionTime] = useState(0);
-  
-  // Contact-based state
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
-  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
-  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
-  const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
-  const [isGroupMembersModalOpen, setIsGroupMembersModalOpen] = useState(false);
   const [isCaptchaModalOpen, setIsCaptchaModalOpen] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<{ content: string; recipient: string } | null>(null);
+  // const [showDatabaseTest, setShowDatabaseTest] = useState(false);
 
-  // Load contacts and groups for the connected wallet
-  const loadContacts = useCallback(async () => {
-    const walletAddress = selectedBlockchain === 'solana' 
-      ? publicKey?.toString() 
-      : evmWallet.address;
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+
+  // Load contacts for the connected wallet
+  const loadContacts = useCallback(async (): Promise<void> => {
+    const walletAddress = evmAddress;
       
     if (!walletAddress) {
       setContacts([]);
-      setGroups([]);
       setCurrentConversation(null);
       setTotalUnreadCount(0);
       return;
     }
 
-    setIsLoadingContacts(true);
     try {
-      const contactsList = MessageStorageService.getContacts(walletAddress, selectedBlockchain);
-      const groupsList = MessageStorageService.getGroupsForWallet(walletAddress);
-      const unreadCount = MessageStorageService.getTotalUnreadCount(walletAddress);
+      let storedContacts: Contact[];
       
-      setContacts(contactsList);
-      setGroups(groupsList);
-      setTotalUnreadCount(unreadCount);
-      
-      // If there's a selected contact, reload the conversation
-      if (selectedContact) {
-        const conversation = MessageStorageService.getConversation(walletAddress, selectedContact.address);
-        setCurrentConversation(conversation);
+      if (useHybridMode) {
+        // Use hybrid database for real-time sync
+        console.log('Loading contacts from hybrid database...');
+        try {
+          storedContacts = await HybridDatabaseService.getContacts(walletAddress);
+          console.log('Loaded contacts from database:', storedContacts.length);
+        } catch (dbError) {
+          console.warn('Failed to load from database, falling back to local storage:', dbError);
+          storedContacts = MessageStorageService.getContacts(walletAddress, 'evm');
+        }
+        
+        // Also sync with local storage for offline support
+        const localContacts = MessageStorageService.getContacts(walletAddress, 'evm');
+        
+        // Merge contacts (database takes priority)
+        const contactMap = new Map<string, Contact>();
+        localContacts.forEach(contact => contactMap.set(contact.address, contact));
+        storedContacts.forEach(contact => contactMap.set(contact.address, contact));
+        
+        storedContacts = Array.from(contactMap.values());
+        console.log('Final merged contacts:', storedContacts.length);
+      } else {
+        // Use local storage only
+        storedContacts = MessageStorageService.getContacts(walletAddress, 'evm');
       }
       
-      console.log(`Loaded ${contactsList.length} contacts and ${groupsList.length} groups with ${unreadCount} unread messages`);
+      setContacts(storedContacts);
+
+      const unread = storedContacts.reduce((sum, contact) => sum + (contact.unreadCount || 0), 0);
+      setTotalUnreadCount(unread);
+
+      // Refresh current conversation if a contact is selected
+      if (selectedContact) {
+        let updatedConversation = MessageStorageService.getConversation(walletAddress, selectedContact.address);
+        
+        // If using hybrid mode, also fetch messages from database
+        if (useHybridMode) {
+          try {
+            const dbMessages = await HybridDatabaseService.getMessages(walletAddress, selectedContact.address);
+            console.log('Fetched messages from database:', dbMessages.length);
+            
+            // Merge with local messages
+            const localMessages = MessageStorageService.getConversation(walletAddress, selectedContact.address)?.messages || [];
+            const allMessages = [...localMessages, ...dbMessages];
+            
+            // Remove duplicates and sort by timestamp
+            const uniqueMessages = allMessages.filter((message, index, self) => 
+              index === self.findIndex(m => 
+                m.id === message.id || 
+                (m.transactionSignature === message.transactionSignature && m.transactionSignature)
+              )
+            ).sort((a, b) => a.timestamp - b.timestamp);
+            
+            // Update local storage with merged messages
+            uniqueMessages.forEach(msg => MessageStorageService.storeMessage(msg));
+            
+            // Get updated conversation
+            updatedConversation = MessageStorageService.getConversation(walletAddress, selectedContact.address);
+          } catch (dbError) {
+            console.warn('Failed to fetch messages from database:', dbError);
+          }
+        }
+        
+        setCurrentConversation(updatedConversation);
+      }
     } catch (error) {
-      console.error('Error loading contacts and groups:', error);
-    } finally {
-      setIsLoadingContacts(false);
+      console.error('Failed to load contacts:', error);
+      // Fallback to local storage
+      const storedContacts = MessageStorageService.getContacts(walletAddress, 'evm');
+      setContacts(storedContacts);
+      const unread = storedContacts.reduce((sum, contact) => sum + (contact.unreadCount || 0), 0);
+      setTotalUnreadCount(unread);
     }
-  }, [publicKey, evmWallet.address, selectedBlockchain, selectedContact]);
+  }, [evmAddress, selectedContact, useHybridMode]);
 
-  // Load contacts when wallet connects/disconnects
+  // Real-time sync with hybrid database
   useEffect(() => {
-    loadContacts();
-  }, [loadContacts]);
+    if (!evmAddress || !useHybridMode) return;
 
-  // Handle contact selection
-  const handleContactSelect = useCallback((contact: Contact) => {
-    if (!publicKey) return;
+    console.log('Setting up real-time sync for wallet:', evmAddress);
     
-    setSelectedContact(contact);
-    setSelectedGroup(null); // Clear group selection
-    
-    // Load conversation for the current wallet (either as sender or recipient)
-    const conversation = MessageStorageService.getConversation(publicKey.toString(), contact.address);
-    setCurrentConversation(conversation);
-    
-    // Mark conversation as read
-    if (conversation) {
-      MessageStorageService.markConversationAsRead(publicKey.toString(), contact.address);
-      // Reload contacts to update unread counts
-      loadContacts();
-    }
-  }, [publicKey, loadContacts]);
-
-  // Handle group selection
-  const handleGroupSelect = useCallback((group: Group) => {
-    if (!publicKey) return;
-    
-    setSelectedGroup(group);
-    setSelectedContact(null); // Clear contact selection
-    
-    // Load group conversation using the proper method
-    const conversation = MessageStorageService.getGroupConversation(publicKey.toString(), group.id);
-    setCurrentConversation(conversation);
-    
-    // Mark group conversation as read
-    if (conversation) {
-      MessageStorageService.markGroupConversationAsRead(publicKey.toString(), group.id);
-      // Reload contacts to update unread counts
-      loadContacts();
-    }
-  }, [publicKey, loadContacts]);
-
-  // Handle creating a new group
-  const handleCreateGroup = useCallback(async (groupData: { name: string; description: string; members: string[] }) => {
-    if (!publicKey) return;
-    
-    setIsCreatingGroup(true);
-    try {
-      // Include the creator in the group members
-      const allMembers = [publicKey.toString(), ...groupData.members];
+    const subscription = HybridDatabaseService.subscribeToMessages(evmAddress, (message) => {
+      console.log('Real-time message received:', message);
       
-      const group = MessageStorageService.storeGroup({
-        ...groupData,
-        members: allMembers,
-        createdBy: publicKey.toString(),
+      // Store message locally
+      MessageStorageService.storeMessage(message);
+      
+      // Reload contacts to update UI
+      loadContacts();
+      
+      // Update current conversation if we're viewing the sender
+      if (selectedContact && 
+          (message.sender === selectedContact.address || message.recipient === selectedContact.address)) {
+        const updatedConversation = MessageStorageService.getConversation(evmAddress, selectedContact.address);
+        setCurrentConversation(updatedConversation);
+      }
+      
+      toast.success('New message received!');
+    });
+
+    // Fallback: Periodic sync every 30 seconds to catch any missed messages
+    const periodicSync = setInterval(async () => {
+      try {
+        console.log('Performing periodic sync...');
+        await loadContacts();
+      } catch (error) {
+        console.warn('Periodic sync failed:', error);
+      }
+    }, 30000); // 30 seconds
+
+    return () => {
+      console.log('Cleaning up real-time subscription and periodic sync');
+      subscription.unsubscribe();
+      clearInterval(periodicSync);
+    };
+  }, [evmAddress, useHybridMode, selectedContact, loadContacts]);
+
+  // Clean up duplicate messages in localStorage
+  const cleanupDuplicateMessages = useCallback((): void => {
+    try {
+      const messages = MessageStorageService.getAllMessages();
+      
+      // Remove duplicates
+      const uniqueMessages = messages.filter((message, index, self) => 
+        index === self.findIndex(m => 
+          m.id === message.id || 
+          (m.transactionSignature === message.transactionSignature && m.transactionSignature)
+        )
+      );
+      
+      // Clean up messages with empty content or raw encrypted data as content
+      const cleanedMessages = uniqueMessages.map(message => {
+        // Only fix messages that have problematic content (raw encrypted data as content)
+        if (message.content && message.content.includes('{"encryptedContent"')) {
+          // For messages with raw encrypted data as content, show a proper fallback
+          if (message.isEncrypted) {
+            return {
+              ...message,
+              content: '[Encrypted Message]'
+            };
+          } else {
+            return {
+              ...message,
+              content: 'Message content unavailable'
+            };
+          }
+        }
+        // Don't modify messages that already have proper content
+        return message;
       });
       
-      // Reload groups
-      await loadContacts();
-      
-      // Select the new group
-      handleGroupSelect(group);
-      
-      console.log('Group created:', group);
-    } catch (error) {
-      console.error('Error creating group:', error);
-    } finally {
-      setIsCreatingGroup(false);
-    }
-  }, [publicKey, loadContacts, handleGroupSelect]);
-
-  // Handle editing group
-  const handleEditGroup = useCallback((group: Group) => {
-    setEditingGroup(group);
-    // TODO: Open group edit modal
-  }, []);
-
-  // Handle deleting group
-  const handleDeleteGroup = useCallback(async (groupId: string) => {
-    if (!publicKey) return;
-    
-    try {
-      // Delete the group from storage
-      MessageStorageService.deleteGroup(groupId);
-      
-      // Clear current conversation if it's the deleted group
-      if (selectedGroup && selectedGroup.id === groupId) {
-        setSelectedGroup(null);
-        setCurrentConversation(null);
+      if (cleanedMessages.length !== messages.length || cleanedMessages.some((msg, i) => msg !== uniqueMessages[i])) {
+        console.log(`Cleaned up ${messages.length - cleanedMessages.length} duplicate/problematic messages`);
+        MessageStorageService.setMessages(cleanedMessages);
+        loadContacts(); // Reload to update UI
       }
-      
-      // Reload contacts and groups
-      await loadContacts();
-      
-      console.log('Group deleted:', groupId);
     } catch (error) {
-      console.error('Error deleting group:', error);
-      alert('Failed to delete group. Please try again.');
+      console.error('Failed to cleanup duplicate messages:', error);
     }
-  }, [publicKey, selectedGroup, loadContacts]);
+  }, [loadContacts]);
 
-  // Handle opening group members modal
-  const handleOpenGroupMembers = useCallback(() => {
-    setIsGroupMembersModalOpen(true);
-  }, []);
-
-  // Handle closing group members modal
-  const handleCloseGroupMembers = useCallback(() => {
-    setIsGroupMembersModalOpen(false);
-  }, []);
-
-  // Handle sending message to current conversation (contact or group)
-  const handleSendToConversation = useCallback(async (content: string) => {
-    if (!publicKey) return;
-    
-    setIsSending(true);
-    try {
-      if (selectedContact) {
-        // Send to individual contact
-        await handleSendMessage(content, selectedContact.address);
-        
-        // Reload the conversation to show the new message
-        const updatedConversation = MessageStorageService.getConversation(publicKey.toString(), selectedContact.address);
-        setCurrentConversation(updatedConversation);
-      } else if (selectedGroup) {
-        // Send to group - create group message
-        console.log('Sending group message to group wallet:', selectedGroup.groupWallet);
-        
-        // Do SOL transfer to group wallet
-        const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-        const recipientPubkey = new PublicKey(selectedGroup.groupWallet);
-        
-        const transaction = new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: publicKey,
-            toPubkey: recipientPubkey,
-            lamports: 1000000, // 0.001 SOL
-          })
-        );
-
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = publicKey;
-
-        const signedTransaction = await signTransaction!(transaction);
-        const signature = await connection.sendRawTransaction(signedTransaction.serialize());
-        
-        const confirmation = await connection.confirmTransaction({
-          signature,
-          blockhash,
-          lastValidBlockHeight
-        }, 'confirmed');
-        
-        if (confirmation.value.err) {
-          throw new Error(`Transaction failed: ${confirmation.value.err}`);
-        }
-        
-        // Store the group message (sent to group wallet)
-        MessageStorageService.storeMessage({
-          sender: publicKey.toString(),
-          recipient: selectedGroup.groupWallet,
-          content: content,
-          messageType: 'text',
-          transactionSignature: signature,
-        });
-        
-        // Reload the group conversation
-        const updatedConversation = MessageStorageService.getGroupConversation(publicKey.toString(), selectedGroup.id);
-        setCurrentConversation(updatedConversation);
-      }
-      
-      // Reload contacts and groups to update last message and unread counts
-      await loadContacts();
-    } catch (error) {
-      console.error('Error sending message to conversation:', error);
-      alert(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsSending(false);
-    }
-  }, [selectedContact, selectedGroup, publicKey]);
-
-  // Removed unused NFT creation function - using direct SOL transfers instead
-
-  // Removed unused message modal functions
-
-  const handleOpenAboutModal = () => {
-    setIsAboutModalOpen(true);
-  };
-
-  const handleCloseAboutModal = () => {
-    setIsAboutModalOpen(false);
-  };
-
-  // Handle contact editing
-  const handleEditContact = (contact: Contact) => {
-    setEditingContact(contact);
-    setIsContactTagModalOpen(true);
-  };
-
-  const handleCloseContactTagModal = () => {
-    setIsContactTagModalOpen(false);
-    setEditingContact(null);
-  };
-
-  const handleSaveContactTag = (address: string, customTag: string) => {
-    if (!publicKey) return;
-    
-    MessageStorageService.setContactTag(publicKey.toString(), address, customTag);
-    // Reload contacts to show the updated tag
+  useEffect(() => {
+    // Clean up any duplicate messages first
+    cleanupDuplicateMessages();
     loadContacts();
-  };
-
-  const handleRemoveContactTag = (address: string) => {
-    if (!publicKey) return;
     
-    MessageStorageService.removeContactTag(publicKey.toString(), address);
-    // Reload contacts to show the updated tag
-    loadContacts();
-  };
-
-  // Fetch wallet balance when connected
-  React.useEffect(() => {
-    const fetchBalance = async () => {
-      if (connected && publicKey) {
-        try {
-          const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-          const balance = await connection.getBalance(publicKey);
-          setWalletBalance(balance / 1000000000); // Convert to SOL
-        } catch (error) {
-          console.error('Failed to fetch balance:', error);
-          setWalletBalance(null);
-        }
-      } else {
-        setWalletBalance(null);
-      }
-    };
-
-    fetchBalance();
-  }, [connected, publicKey]);
-
-  const handleSendMessage = async (content?: string, recipient?: string) => {
-    console.log('handleSendMessage called with:', { content, recipient });
-    const finalRecipient = recipient || recipientAddress;
-    const finalContent = content || messageContent;
-    console.log('Final values:', { finalRecipient, finalContent });
-    
-    if (!finalRecipient.trim() || !finalContent.trim()) {
-      console.log('Missing recipient or content');
-      alert('Please fill in both recipient address and message content.');
-      return;
+    // Initialize Feather icons
+    if (typeof window !== 'undefined' && (window as any).feather) {
+      (window as any).feather.replace();
     }
+  }, [loadContacts, selectedWalletType, evmAddress, cleanupDuplicateMessages]);
 
-    if (!connected || !publicKey) {
-      console.log('Wallet not connected');
-      alert('Please connect your wallet first to send messages.');
-      return;
-    }
-
-    // Security validation
-    const contentValidation = SecurityService.validateMessageContent(finalContent);
-    if (!contentValidation.valid) {
-      alert(contentValidation.reason);
-      return;
-    }
-
-    // Check rate limiting
-    const rateLimitCheck = SecurityService.canSendMessage(publicKey.toString());
-    if (!rateLimitCheck.allowed) {
-      alert(rateLimitCheck.reason);
-      return;
-    }
-
-    // Check if address is flagged
-    if (SecurityService.isAddressFlagged(finalRecipient)) {
-      alert('This address has been flagged for suspicious activity');
-      return;
-    }
-
-    // Simple address validation (basic check for Solana address length)
-    if (finalRecipient.length < 32 || finalRecipient.length > 44) {
-      console.log('Address length validation failed:', finalRecipient.length);
-      alert('Please enter a valid Solana wallet address (must be between 32-44 characters).');
-      return;
-    }
-
-    // Prevent duplicate submissions
-    if (isSending) {
-      console.log('Message already being sent, please wait...');
-      return;
-    }
-
-    // Debounce: prevent rapid clicking (wait at least 2 seconds between transactions)
-    const now = Date.now();
-    if (now - lastTransactionTime < 2000) {
-      console.log('Debounce check failed');
-      alert('Please wait a moment before sending another message.');
-      return;
-    }
-
-    // Show CAPTCHA for security
-    setPendingMessage({ content: finalContent, recipient: finalRecipient });
-    setIsCaptchaModalOpen(true);
+  // Handle wallet type change
+  const handleWalletTypeChange = (type: WalletType): void => {
+    setSelectedWalletType(type);
   };
 
   // EVM message sending handler
-  const handleEVMMessage = async (recipient: string, content: string, chainId: number) => {
-    if (!evmWallet.isConnected) {
-      alert('Please connect your EVM wallet first');
+  const handleEVMMessage = useCallback(async (recipient: string, content: string, chainId: number): Promise<void> => {
+    console.log('📨 handleEVMMessage called with:', { recipient, content, chainId, ultraLowCostMode });
+    console.log('🔗 EVM Wallet state check:', {
+      evmConnected,
+      evmAddress,
+      evmChainId,
+      selectedWalletType
+    });
+
+    if (!evmAddress) {
+      console.error('❌ EVM wallet not connected:', { evmConnected, evmAddress });
+      toast.error('Please connect your Base wallet first');
       return;
     }
 
     try {
-      // This would use the actual EVM service when ethers.js is installed
-      // For now, we'll simulate the transaction
-      const mockTransactionHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-      
-      // Store the EVM message
-      MessageStorageService.storeMessage({
-        sender: evmWallet.address!,
-        recipient: recipient,
-        content: content,
-        messageType: 'text',
-        transactionSignature: mockTransactionHash,
-        chainType: 'evm',
-        chainId: chainId,
+      console.log('EVM Wallet state confirmed:', {
+        isConnected: evmConnected,
+        address: evmAddress,
+        chainId: evmChainId
       });
+
+      // Import services
+      const IPFSService = await import('./services/ipfsService');
+      const EnhancedEncryptionService = await import('./services/enhancedEncryptionService');
+
+      // Generate or get encryption keys for this conversation
+      const keyId = await EnhancedEncryptionService.default.getKeyId(evmAddress!, recipient);
+      let senderKeyPair = await getOrCreateKeyPair(keyId, 'sender');
+      let recipientKeyPair = await getOrCreateKeyPair(keyId, 'recipient');
+
+      // Encrypt the message
+      const encryptedMessage = await EnhancedEncryptionService.default.encryptMessage(
+        content,
+        senderKeyPair.privateKey,
+        recipientKeyPair.publicKey
+      );
+
+      console.log('Message encrypted successfully');
+
+      // Upload encrypted content to IPFS first
+      let ipfsHash: string | undefined;
+      try {
+        const encryptedData = JSON.stringify(encryptedMessage);
+        const ipfsResult = await IPFSService.default.uploadContent(encryptedData);
+        ipfsHash = ipfsResult.hash;
+        console.log('Encrypted content uploaded to IPFS:', ipfsResult);
+      } catch (error) {
+        console.warn('IPFS upload failed, continuing without IPFS:', error);
+      }
+
+      let transactionHash: string;
+
+      if (ultraLowCostMode) {
+        // Ultra-low-cost mode: Database-only, no blockchain transaction
+        console.log('🚀 Using ultra-low-cost mode (database-only)');
+        transactionHash = `db_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log('Database-only message created:', transactionHash);
+      } else {
+        // Standard mode: Send blockchain transaction
+        const { minikitConfig } = await import('./config/minikit');
+        const { sendTransaction, estimateGas } = await import('wagmi/actions');
+        
+        // Send minimal transaction with compressed data (reduces gas cost)
+        const messageId = `msg_${Date.now()}`;
+        const data = `0x${Array.from(new TextEncoder().encode(messageId))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')}`;
+
+        // Try gas estimation first, fallback to lower default if it fails
+        let gasEstimate;
+        try {
+          gasEstimate = await estimateGas(minikitConfig, {
+            to: recipient as `0x${string}`,
+            value: BigInt(0), // No ETH value transfer - saves ~$0.00003
+            data: data as `0x${string}`,
+          });
+          console.log('Gas estimate:', gasEstimate);
+          // Add 10% buffer to gas estimate (reduced from 20%)
+          gasEstimate = gasEstimate + (gasEstimate * BigInt(10)) / BigInt(100);
+        } catch (gasError) {
+          console.warn('Gas estimation failed, using lower default:', gasError);
+          gasEstimate = BigInt(21000); // Much lower fallback - just basic transaction
+        }
+
+        transactionHash = await sendTransaction(minikitConfig, {
+          to: recipient as `0x${string}`,
+          value: BigInt(0), // No ETH value transfer - saves ~$0.00003
+          data: data as `0x${string}`,
+          gas: gasEstimate,
+        });
+
+        console.log('EVM message sent successfully:', transactionHash);
+      }
+
+      // Store the encrypted message
+      const messageToStore = {
+        sender: evmAddress!,
+        recipient: recipient,
+        content: content, // Store plain text for display
+        messageType: 'text' as const,
+        transactionSignature: transactionHash,
+        chainType: 'evm' as const,
+        chainId: chainId,
+        ipfsHash: ipfsHash,
+        isEncrypted: true,
+        encryptedContent: encryptedMessage.encryptedContent,
+        nonce: encryptedMessage.nonce,
+        publicKey: encryptedMessage.publicKey
+      };
+
+      if (useHybridMode) {
+        // Store in hybrid database for real-time sync
+        try {
+          await HybridDatabaseService.storeMessage(messageToStore);
+          console.log('Message stored in hybrid database');
+        } catch (error) {
+          console.warn('Failed to store in hybrid database, falling back to local storage:', error);
+          MessageStorageService.storeMessage(messageToStore);
+        }
+      } else {
+        // Store locally only
+        MessageStorageService.storeMessage(messageToStore);
+      }
+
+      console.log('Message sent and stored successfully:', content);
 
       // Reload contacts to show the new message
       await loadContacts();
 
+      // Update current conversation if we're viewing the recipient
+      if (selectedContact && selectedContact.address === recipient) {
+        const updatedConversation = MessageStorageService.getConversation(evmAddress!, recipient);
+        console.log('EVM Message - Updated conversation:', updatedConversation);
+        console.log('EVM Message - Messages in conversation:', updatedConversation?.messages);
+        setCurrentConversation(updatedConversation);
+      }
+
       // Show success message
-      alert(`EVM message sent! Transaction: ${mockTransactionHash.slice(0, 10)}...`);
+      toast.success(`Message sent! Transaction: ${transactionHash.slice(0, 10)}...`);
       
     } catch (error) {
       console.error('Failed to send EVM message:', error);
-      alert('Failed to send EVM message. Please try again.');
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error: error
+      });
+      toast.error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error; // Re-throw to be caught by handleCaptchaVerify
     }
-  };
+  }, [evmConnected, evmAddress, evmChainId, selectedWalletType, loadContacts, selectedContact, useHybridMode, ultraLowCostMode]);
 
-  const handleCaptchaVerify = async (success: boolean) => {
-    if (!success || !pendingMessage || !publicKey || !signTransaction) {
+  const handleSendMessage = useCallback(async (content?: string, recipient?: string): Promise<void> => {
+    const currentWalletAddress = evmAddress;
+
+    if (!currentWalletAddress) {
+      toast.error('Please connect your wallet first.');
+      return;
+    }
+
+    const finalRecipient = recipient || selectedContact?.address;
+    const finalContent = content;
+
+    if (!finalRecipient || !finalContent) {
+      toast.error('Recipient or content missing.');
+      return;
+    }
+
+    // Basic security check: prevent sending to self
+    if (finalRecipient === currentWalletAddress) {
+      toast.error("Cannot send message to yourself directly.");
+      return;
+    }
+
+    setPendingMessage({ content: finalContent, recipient: finalRecipient });
+    setIsCaptchaModalOpen(true);
+  }, [evmAddress, selectedContact]);
+
+  const handleCaptchaVerify = async (success: boolean): Promise<void> => {
+    console.log('🔐 Captcha verify called with success:', success);
+    console.log('📝 Pending message:', pendingMessage);
+    console.log('🔗 EVM state:', { evmConnected, evmAddress, evmChainId });
+    
+    if (!success || !pendingMessage) {
+      console.log('❌ Captcha failed or no pending message');
+      setPendingMessage(null);
+      setIsCaptchaModalOpen(false);
+      return;
+    }
+
+    // Check Base wallet connection
+    if (!evmConnected || !evmAddress) {
+      console.log('❌ EVM wallet not connected');
+      toast.error('Please connect your Base wallet first');
       setPendingMessage(null);
       setIsCaptchaModalOpen(false);
       return;
@@ -452,162 +454,352 @@ function AppContent() {
     setPendingMessage(null);
     setIsCaptchaModalOpen(false);
 
-    console.log('Starting encrypted message send process...');
+    console.log('🚀 Starting message send process...', { content, recipient, chainId: evmChainId || 8453 });
     setIsSending(true);
-    setLastTransactionTime(Date.now());
 
-    // Retry mechanism for Solflare wallet issues
-    let retryCount = 0;
-    const maxRetries = 3;
+    // Send Base message
+    try {
+      console.log('📤 Calling handleEVMMessage...');
+      await handleEVMMessage(recipient, content, evmChainId || 8453);
+      console.log('✅ Message sent successfully');
+      setIsSending(false);
+      toast.success('Message sent successfully!');
+      return;
+    } catch (error) {
+      console.error('❌ Failed to send message:', error);
+      console.error('🔍 Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error: error
+      });
+      toast.error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setIsSending(false);
+      return;
+    }
+  };
+
+  // Key management for encryption
+  const getOrCreateKeyPair = async (keyId: string, role: 'sender' | 'recipient'): Promise<any> => {
+    const storageKey = `encryption_key_${keyId}_${role}`;
+    let keyPair = localStorage.getItem(storageKey);
     
-    while (retryCount < maxRetries) {
-      try {
-        console.log(`Attempt ${retryCount + 1} of ${maxRetries}...`);
-        
-        console.log('Checking wallet balance...');
-        // Check wallet balance first
-        const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-        const balance = await connection.getBalance(publicKey);
-        const balanceInSOL = balance / 1000000000; // Convert lamports to SOL
-        console.log('Wallet balance:', balanceInSOL, 'SOL');
-        
-        if (balance < 2000000) { // Need at least 0.002 SOL (for transaction + fees)
-          console.log('Insufficient balance');
-          alert(`Insufficient balance!\n\nYour balance: ${balanceInSOL.toFixed(6)} SOL\nRequired: 0.002 SOL\n\nPlease get more devnet SOL from: https://faucet.solana.com/`);
-          return;
-        }
-        
-        console.log('Validating recipient address:', recipient);
-        // Validate recipient address
-        try {
-          new PublicKey(recipient);
-          console.log('Address validation passed');
-        } catch (error) {
-          console.error('Address validation error:', error);
-          console.error('Address being validated:', recipient);
-          alert(`Invalid recipient address! Please check the address format.\n\nAddress: ${recipient}\nError: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          return;
-        }
-        
-        // Create a simple SOL transfer
-        const recipientPubkey = new PublicKey(recipient);
-        
-        // Add a small random amount to make each transaction unique (helps with Solflare caching)
-        const randomAmount = Math.floor(Math.random() * 1000); // 0-999 lamports
-        const totalAmount = 1000000 + randomAmount; // 0.001 SOL + small random amount
-        
-        const transaction = new Transaction().add(
-          SystemProgram.transfer({
-            fromPubkey: publicKey,
-            toPubkey: recipientPubkey,
-            lamports: totalAmount,
-          })
-        );
-
-        // Get fresh blockhash to prevent duplicate transactions
-        // Use 'finalized' commitment for better reliability with Solflare
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
-        transaction.recentBlockhash = blockhash;
-        transaction.feePayer = publicKey;
-
-        // Add a small delay to ensure blockhash is fresh (helps with Solflare)
-        await new Promise(resolve => setTimeout(resolve, 100 + (retryCount * 200))); // Increasing delay with retries
-
-        // Sign and send transaction
-        const signedTransaction = await signTransaction!(transaction);
-        const signature = await connection.sendRawTransaction(signedTransaction.serialize());
-      
-        // Wait for confirmation with timeout
-        const confirmation = await connection.confirmTransaction({
-          signature,
-          blockhash,
-          lastValidBlockHeight
-        }, 'confirmed');
-        
-        if (confirmation.value.err) {
-          throw new Error(`Transaction failed: ${confirmation.value.err}`);
-        }
-
-        // Store the encrypted message
-        MessageStorageService.storeEncryptedMessage({
-          sender: publicKey.toString(),
-          recipient: recipient,
-          content: content,
-          messageType: 'text',
-          transactionSignature: signature,
-        }, publicKey.toString(), recipient);
-
-        // Record the message attempt for rate limiting
-        SecurityService.recordMessageAttempt(publicKey.toString());
-
-        // Reload contacts to show the new sent message
-        await loadContacts();
-
-        // If we're in a conversation with this recipient, reload the conversation
-        if (selectedContact && selectedContact.address === recipient) {
-          const updatedConversation = MessageStorageService.getConversation(publicKey.toString(), recipient);
-          setCurrentConversation(updatedConversation);
-        }
-
-        // Show success modal with transaction details
-        setSuccessData({
-          transactionSignature: signature,
-          recipientAddress: recipient,
-          messageContent: content
-        });
-        setIsSuccessModalOpen(true);
-        
-        // Clear the form
-        setRecipientAddress('');
-        setMessageContent('');
-        
-        // Success! Break out of retry loop
-        break;
-        
-      } catch (error) {
-        console.error(`Attempt ${retryCount + 1} failed:`, error);
-        
-        // Check if this is a retryable error
-        const isRetryableError = error instanceof Error && (
-          error.message.includes('already been processed') ||
-          error.message.includes('already processed') ||
-          error.message.includes('TransactionExpiredBlockheightExceededError') ||
-          error.message.includes('BlockhashNotFound')
-        );
-        
-        if (isRetryableError && retryCount < maxRetries - 1) {
-          retryCount++;
-          console.log(`Retrying in ${1000 + (retryCount * 500)}ms...`);
-          await new Promise(resolve => setTimeout(resolve, 1000 + (retryCount * 500)));
-          continue;
-        }
-        
-        // Handle specific Solana errors
-        if (error instanceof Error) {
-          if (error.message.includes('already been processed') || error.message.includes('already processed')) {
-            alert('Transaction already processed. This can happen with Solflare wallet. Please wait a moment and try again, or refresh the page.');
-          } else if (error.message.includes('insufficient funds')) {
-            alert('Insufficient SOL balance. Please add more SOL to your wallet.');
-          } else if (error.message.includes('User rejected') || error.message.includes('rejected')) {
-            alert('Transaction was cancelled by user.');
-          } else if (error.message.includes('simulation failed')) {
-            alert('Transaction simulation failed. Please check your wallet balance and try again.');
-          } else if (error.message.includes('TransactionExpiredBlockheightExceededError')) {
-            alert('Transaction expired. Please try again with a fresh transaction.');
-          } else if (error.message.includes('BlockhashNotFound')) {
-            alert('Blockhash not found. Please try again - this sometimes happens with Solflare.');
-          } else {
-            alert(`Failed to send message: ${error.message}`);
-          }
-        } else {
-          alert('Failed to send message: Unknown error');
-        }
-        break;
-      }
+    if (keyPair) {
+      return JSON.parse(keyPair);
     }
     
-    setIsSending(false);
+    // Generate new key pair
+    const EnhancedEncryptionService = await import('./services/enhancedEncryptionService');
+    const newKeyPair = EnhancedEncryptionService.default.generateKeyPair();
+    
+    // Store key pair
+    localStorage.setItem(storageKey, JSON.stringify({
+      publicKey: Array.from(newKeyPair.publicKey),
+      privateKey: Array.from(newKeyPair.privateKey)
+    }));
+    
+    return newKeyPair;
   };
+
+  // Inspect raw localStorage data (for debugging)
+  const inspectLocalStorage = useCallback((): void => {
+    try {
+      const rawData = localStorage.getItem('dotmsg_messages');
+      console.log('Raw localStorage data:', rawData);
+      
+      if (rawData) {
+        const messages = JSON.parse(rawData);
+        console.log('Parsed messages:', messages);
+        
+        // Filter messages for current wallet
+        const walletMessages = messages.filter((msg: any) => 
+          msg.sender === evmAddress || msg.recipient === evmAddress
+        );
+        console.log(`Messages for wallet ${evmAddress}:`, walletMessages);
+        console.log(`Total messages found: ${walletMessages.length}`);
+        
+        messages.forEach((msg: any, index: number) => {
+          console.log(`Message ${index}:`, {
+            id: msg.id,
+            sender: msg.sender,
+            recipient: msg.recipient,
+            content: msg.content,
+            isEncrypted: msg.isEncrypted,
+            hasEncryptedContent: !!msg.encryptedContent,
+            transactionSignature: msg.transactionSignature
+          });
+        });
+      }
+      
+      toast.success('Check console for detailed localStorage data');
+    } catch (error) {
+      console.error('Failed to inspect localStorage:', error);
+      toast.error('Failed to inspect localStorage');
+    }
+  }, [evmAddress]);
+
+  // Clear all messages and reload (for debugging)
+  const clearAllMessages = useCallback((): void => {
+    try {
+      localStorage.removeItem('dotmsg_messages');
+      console.log('Cleared all messages from localStorage');
+      loadContacts(); // Reload to update UI
+    } catch (error) {
+      console.error('Failed to clear messages:', error);
+    }
+  }, [loadContacts]);
+
+  // Debug function to test message sending without captcha
+  const handleDebugSendMessage = useCallback(async (): Promise<void> => {
+    if (!evmAddress || !selectedContact) {
+      toast.error('Please connect wallet and select a contact first');
+      return;
+    }
+
+    const testMessage = 'Debug test message';
+    const recipient = selectedContact.address;
+    
+    console.log('🧪 Debug sending message:', { testMessage, recipient });
+    
+    try {
+      setIsSending(true);
+      await handleEVMMessage(recipient, testMessage, evmChainId || 8453);
+      toast.success('Debug message sent!');
+    } catch (error) {
+      console.error('Debug send failed:', error);
+      toast.error(`Debug send failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSending(false);
+    }
+  }, [evmAddress, selectedContact, evmChainId, handleEVMMessage]);
+
+  // Manual message recovery from transaction data
+  const handleManualRecovery = useCallback(async (): Promise<void> => {
+    if (!evmAddress) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      toast.loading('Scanning for messages in recent transactions...', { id: 'recovery' });
+      
+      console.log('Manual recovery for address:', evmAddress);
+      
+      // For now, let's create a simple message that simulates a recovered message
+      // This is a temporary solution until we fix the API issue
+      const recoveredMessage = {
+        id: `recovered_${Date.now()}`,
+        sender: evmAddress,
+        recipient: '0x0000000000000000000000000000000000000000', // Placeholder
+        content: 'This is a test recovered message. The recovery feature is being updated.',
+        messageType: 'text' as const,
+        transactionSignature: 'recovery_test',
+        chainType: 'evm' as const,
+        chainId: 8453,
+        timestamp: Date.now(),
+        isEncrypted: false
+      };
+      
+      // Store the test message
+      MessageStorageService.storeMessage(recoveredMessage);
+      await loadContacts();
+      
+      toast.success('Test recovery message added. Recovery feature is being updated.', { id: 'recovery' });
+    } catch (error) {
+      console.error('Manual recovery failed:', error);
+      toast.error(`Recovery failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'recovery' });
+    }
+  }, [evmAddress, loadContacts]);
+
+  const handleOpenAboutModal = (): void => setIsAboutModalOpen(true);
+  const handleCloseAboutModal = (): void => setIsAboutModalOpen(false);
+
+  // Handle database test
+  // const handleTestDatabase = useCallback((): void => {
+  //   setShowDatabaseTest(true);
+  // }, []);
+
+  // Handle adding a new contact
+  const handleAddContact = useCallback(async (address: string, displayName?: string): Promise<void> => {
+    if (!evmAddress) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    if (!address || address.trim() === '') {
+      toast.error('Please enter a valid address');
+      return;
+    }
+
+    // Validate address format (basic check)
+    if (!address.startsWith('0x') || address.length !== 42) {
+      toast.error('Please enter a valid Base address (0x...)');
+      return;
+    }
+
+    // Check if contact already exists
+    const existingContact = contacts.find(contact => 
+      contact.address.toLowerCase() === address.toLowerCase()
+    );
+
+    if (existingContact) {
+      toast.error('Contact already exists');
+      return;
+    }
+
+    try {
+      // Create new contact
+      const newContact: Contact = {
+        address: address,
+        displayName: displayName || `Contact ${address.slice(0, 6)}...${address.slice(-4)}`,
+        customTag: displayName || undefined,
+        lastActivity: Date.now(),
+        unreadCount: 0,
+        isOnline: false
+      };
+
+      // Store contact by creating a placeholder message
+      if (newContact.customTag) {
+        MessageStorageService.setContactTag(evmAddress, newContact.address, newContact.customTag);
+      }
+      
+      // Create a placeholder message to establish the contact relationship
+      const placeholderMessage = {
+        sender: evmAddress,
+        recipient: newContact.address,
+        content: 'Contact added',
+        messageType: 'text' as const,
+        transactionSignature: 'contact_placeholder',
+        chainType: 'evm' as const,
+        chainId: 8453,
+        isRead: true,
+        isEncrypted: false
+      };
+      
+      MessageStorageService.storeMessage(placeholderMessage);
+      
+      // Reload contacts
+      await loadContacts();
+      
+      toast.success('Contact added successfully!');
+      setIsAddContactModalOpen(false);
+    } catch (error) {
+      console.error('Failed to add contact:', error);
+      toast.error('Failed to add contact');
+    }
+  }, [evmAddress, contacts, loadContacts]);
+
+
+  // Handle cross-device message sync
+  const handleSyncMessages = async (): Promise<void> => {
+    if (!evmAddress) {
+      toast.error('Please connect your wallet first');
+      return;
+    }
+
+    try {
+      toast.loading('Syncing messages from IPFS...', { id: 'sync' });
+      
+      console.log('Starting cross-device sync for address:', evmAddress);
+      
+      const MessageRecoveryService = await import('./services/messageRecoveryService');
+      await MessageRecoveryService.default.performCrossDeviceSync(evmAddress);
+      
+      console.log('Sync completed');
+      
+      // Clean up any duplicate messages
+      cleanupDuplicateMessages();
+      
+      // Reload contacts to show synced messages
+      await loadContacts();
+      
+      // Count messages after sync
+      const allMessages = MessageStorageService.getAllMessages();
+      const walletMessages = allMessages.filter((msg: any) => 
+        msg.sender === evmAddress || msg.recipient === evmAddress
+      );
+      
+      console.log(`Total messages after sync: ${walletMessages.length}`);
+      toast.success(`Sync completed! Found ${walletMessages.length} messages total.`, { id: 'sync' });
+    } catch (error) {
+      console.error('Failed to sync messages:', error);
+      toast.error(`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`, { id: 'sync' });
+    }
+  };
+  const handleCloseSuccessModal = (): void => setIsSuccessModalOpen(false);
+  const handleCloseNewMessageModal = (): void => setIsNewMessageModalOpen(false);
+  const handleCloseContactTagModal = (): void => {
+    setIsContactTagModalOpen(false);
+    setContactToTag(null);
+  };
+
+  // Handle contact selection
+  const handleContactSelect = useCallback((contact: Contact): void => {
+    const currentWalletAddress = evmAddress;
+
+    if (!currentWalletAddress) return;
+
+    setSelectedContact(contact);
+
+    const conversation = MessageStorageService.getConversation(currentWalletAddress, contact.address);
+    setCurrentConversation(conversation);
+
+    if (conversation) {
+      MessageStorageService.markConversationAsRead(currentWalletAddress, contact.address);
+      loadContacts();
+    }
+  }, [evmAddress, loadContacts]);
+
+
+
+
+  // Handle saving contact tag
+  const handleSaveContactTag = (address: string, customTag: string): void => {
+    const currentWalletAddress = evmAddress;
+
+    if (!currentWalletAddress) return;
+
+    MessageStorageService.setContactTag(currentWalletAddress, address, customTag);
+    loadContacts();
+    toast.success('Contact tag saved!');
+  };
+
+  // Handle removing contact tag
+  const handleRemoveContactTag = (address: string): void => {
+    const currentWalletAddress = evmAddress;
+
+    if (!currentWalletAddress) return;
+
+    MessageStorageService.removeContactTag(currentWalletAddress, address);
+    loadContacts();
+    toast.success('Contact tag removed!');
+  };
+
+  // Handle sending message to current conversation
+  const handleSendToConversation = useCallback(async (content: string): Promise<void> => {
+    const currentWalletAddress = evmAddress;
+
+    if (!currentWalletAddress) {
+      toast.error('Please connect your wallet to send messages.');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      if (selectedContact) {
+        await handleSendMessage(content, selectedContact.address);
+
+        const updatedConversation = MessageStorageService.getConversation(currentWalletAddress, selectedContact.address);
+        setCurrentConversation(updatedConversation);
+      }
+
+      await loadContacts();
+    } catch (error) {
+      console.error('Error sending message to conversation:', error);
+      toast.error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsSending(false);
+    }
+  }, [selectedContact, evmAddress, loadContacts, handleSendMessage]);
 
 
   return (
@@ -617,150 +809,145 @@ function AppContent() {
           ? 'bg-gray-900' 
           : 'bg-gray-50'
       }`}>
-        <Header 
-          onOpenAbout={handleOpenAboutModal}
-          unreadCount={totalUnreadCount}
-          onNewMessage={() => setIsNewMessageModalOpen(true)}
-        />
+             <BaseMiniAppHeader
+               onOpenAbout={handleOpenAboutModal}
+               unreadCount={totalUnreadCount}
+               onNewMessage={() => setIsNewMessageModalOpen(true)}
+               onAddContact={() => setIsAddContactModalOpen(true)}
+               onSyncMessages={handleSyncMessages}
+               onCleanupMessages={cleanupDuplicateMessages}
+               onClearAllMessages={clearAllMessages}
+               onInspectStorage={inspectLocalStorage}
+               onManualRecovery={handleManualRecovery}
+               onDebugSendMessage={handleDebugSendMessage}
+               selectedWalletType={selectedWalletType}
+               onWalletTypeChange={handleWalletTypeChange}
+               walletButton={<BaseMiniAppWallet onWalletTypeChange={handleWalletTypeChange} />}
+               useHybridMode={useHybridMode}
+               onToggleHybridMode={() => setUseHybridMode(!useHybridMode)}
+               onTestDatabase={() => {}}
+               ultraLowCostMode={ultraLowCostMode}
+               onToggleUltraLowCostMode={() => setUltraLowCostMode(!ultraLowCostMode)}
+             />
         
-        {/* Blockchain Selector */}
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <div className="max-w-md mx-auto">
-            <label className={`block text-sm font-medium mb-2 ${
-              isDark ? 'text-gray-300' : 'text-gray-700'
+        {/* Mode Indicators */}
+        <div className="px-2 sm:px-4 py-1 sm:py-2 space-y-1 sm:space-y-2">
+          <MiniAppModeIndicator onModeChange={() => {}} />
+          {/* Cost Mode Indicator */}
+          {ultraLowCostMode && (
+            <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+              isDark
+                ? 'bg-green-900/30 text-green-300'
+                : 'bg-green-100 text-green-700'
             }`}>
-              Select Blockchain
-            </label>
-            <BlockchainSelector
-              selectedBlockchain={selectedBlockchain}
-              onBlockchainSelect={setSelectedBlockchain}
-            />
-          </div>
+              <span className="text-green-500">💰</span>
+              <span>Ultra-Low-Cost Mode: $0.00 per message (Database-only)</span>
+            </div>
+          )}
         </div>
         
-        <main className={`flex-1 flex max-w-7xl mx-auto w-full shadow-2xl rounded-t-3xl overflow-hidden ${
-          isDark ? 'bg-gray-800' : 'bg-white'
-        }`}>
+        <main className="flex flex-1 overflow-hidden">
           {/* Contact List - Hidden on mobile when conversation is selected */}
-          <div className={`w-full lg:w-80 flex-shrink-0 ${
-            currentConversation ? 'hidden lg:flex' : 'flex'
-          }`}>
+          <div className={`${selectedContact ? 'hidden lg:block' : 'block'} w-full lg:w-80`}>
             <ContactList
               contacts={contacts}
-              groups={groups}
+              onSelectContact={handleContactSelect}
               selectedContact={selectedContact}
-              selectedGroup={selectedGroup}
-              onContactSelect={handleContactSelect}
-              onGroupSelect={handleGroupSelect}
-              onEditContact={handleEditContact}
-              onEditGroup={handleEditGroup}
+              currentWalletAddress={evmAddress || ''}
+              onEditContact={(contact: Contact) => {
+                setContactToTag(contact);
+                setIsContactTagModalOpen(true);
+              }}
+              onOpenContactTagModal={(contact: Contact) => {
+                setContactToTag(contact);
+                setIsContactTagModalOpen(true);
+              }}
               totalUnreadCount={totalUnreadCount}
-              onCreateGroup={() => setIsCreateGroupModalOpen(true)}
             />
           </div>
           
           {/* Conversation View */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <ConversationView
-              conversation={currentConversation}
-              onBack={() => {
-                console.log('Back button clicked, setting selectedContact to null');
-                setSelectedContact(null);
-                setSelectedGroup(null);
-                setCurrentConversation(null);
-              }}
-              onSendMessage={handleSendToConversation}
-              isSending={isSending}
-              currentWalletAddress={publicKey?.toString() || ''}
-              onDeleteGroup={handleDeleteGroup}
-              onOpenGroupMembers={handleOpenGroupMembers}
-            />
-            
-            {/* EVM Message Composer - Show when EVM is selected and in conversation */}
-            {selectedBlockchain === 'evm' && currentConversation && (
-              <EVMMessageComposer
-                onSendMessage={handleEVMMessage}
-                isSending={isSending}
-              />
-            )}
+          <div className={`${selectedContact ? 'block' : 'hidden lg:block'} flex-1 flex flex-col min-w-0`}>
+                <BaseMiniAppConversationView
+                  conversation={currentConversation}
+                  onBack={() => {
+                    console.log('Back button clicked, setting selectedContact to null');
+                    setSelectedContact(null);
+                    setCurrentConversation(null);
+                  }}
+                  onSendMessage={handleSendToConversation}
+                  isSending={isSending}
+                  currentWalletAddress={evmAddress || ''}
+                />
+              
           </div>
         </main>
 
-
-        {isAboutModalOpen && (
-          <AboutModal onClose={handleCloseAboutModal} />
-        )}
-
-        {/* New Message Modal */}
+        <AboutModal isOpen={isAboutModalOpen} onClose={handleCloseAboutModal} />
+        <SuccessModal
+          isOpen={isSuccessModalOpen}
+          onClose={handleCloseSuccessModal}
+          message="Message sent successfully!"
+          transactionSignature=""
+        />
         <NewMessageModal
           isOpen={isNewMessageModalOpen}
-          onClose={() => setIsNewMessageModalOpen(false)}
-          onSend={handleSendMessage}
-          isSending={isSending}
-          walletBalance={walletBalance}
+          onClose={handleCloseNewMessageModal}
+          onSendMessage={handleSendMessage}
+          contacts={contacts}
+          currentWalletAddress={evmAddress || ''}
         />
-
-        {/* Contact Tag Modal */}
-        <ContactTagModal
-          isOpen={isContactTagModalOpen}
-          onClose={handleCloseContactTagModal}
-          contact={editingContact}
-          onSave={handleSaveContactTag}
-          onRemove={handleRemoveContactTag}
+        <AddContactModal
+          isOpen={isAddContactModalOpen}
+          onClose={() => setIsAddContactModalOpen(false)}
+          onAddContact={handleAddContact}
         />
-
-        {/* Create Group Modal */}
-        <CreateGroupModal
-          isOpen={isCreateGroupModalOpen}
-          onClose={() => setIsCreateGroupModalOpen(false)}
-          onCreateGroup={handleCreateGroup}
-          isCreating={isCreatingGroup}
-        />
-
-        {/* Group Members Modal */}
-        <GroupMembersModal
-          isOpen={isGroupMembersModalOpen}
-          onClose={handleCloseGroupMembers}
-          group={selectedGroup}
-          currentWalletAddress={publicKey?.toString() || ''}
-        />
-
-        {/* Success Modal */}
-        {isSuccessModalOpen && successData && (
-          <SuccessModal
-            isOpen={isSuccessModalOpen}
-            onClose={() => {
-              console.log('Closing success modal');
-              setIsSuccessModalOpen(false);
-            }}
-            transactionSignature={successData.transactionSignature}
-            recipientAddress={successData.recipientAddress}
-            messageContent={successData.messageContent}
-            isRealMode={true}
+        {contactToTag && (
+          <ContactTagModal
+            isOpen={isContactTagModalOpen}
+            onClose={handleCloseContactTagModal}
+            contact={contactToTag}
+            onSaveTag={handleSaveContactTag}
+            onRemoveTag={handleRemoveContactTag}
           />
         )}
-
-        {/* CAPTCHA Modal */}
         <CaptchaModal
           isOpen={isCaptchaModalOpen}
-          onClose={() => {
-            setIsCaptchaModalOpen(false);
-            setPendingMessage(null);
-          }}
+          onClose={() => setIsCaptchaModalOpen(false)}
           onVerify={handleCaptchaVerify}
         />
-        
       </div>
     </ErrorBoundary>
   );
 }
 
 function App() {
+  // Global error handler
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent): void => {
+      console.error('Global error:', event.error);
+      event.preventDefault();
+    };
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
+      console.error('Unhandled promise rejection:', event.reason);
+      event.preventDefault();
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
   return (
     <ThemeProvider>
-      <EVMWalletProvider>
+      <BaseMiniAppProvider>
         <AppContent />
-      </EVMWalletProvider>
+      </BaseMiniAppProvider>
     </ThemeProvider>
   );
 }

@@ -59,7 +59,10 @@ A modern, secure messaging application built on Solana blockchain. Parc3l enable
 ### Getting Started
 
 1. **Connect your wallet** using the "Connect Wallet" button
-2. **Get devnet SOL** from [faucet.solana.com](https://faucet.solana.com) for testing
+2. **Get testnet tokens:**
+   - **Solana Devnet SOL**: [faucet.solana.com](https://faucet.solana.com)
+   - **Sepolia ETH**: [sepoliafaucet.com](https://sepoliafaucet.com)
+   - **Mumbai MATIC**: [faucet.polygon.technology](https://faucet.polygon.technology)
 3. **Start messaging** by selecting a contact or creating a group
 
 ### Sending Messages

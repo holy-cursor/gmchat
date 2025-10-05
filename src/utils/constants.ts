@@ -10,9 +10,9 @@ export const MESSAGE_LIMITS = {
 } as const;
 
 export const EXPLORER_URLS = {
-  DEVNET: 'https://explorer.solana.com',
-  MAINNET: 'https://explorer.solana.com',
-  TESTNET: 'https://explorer.solana.com',
+  DEVNET: 'https://sepolia.basescan.org',
+  MAINNET: 'https://basescan.org',
+  TESTNET: 'https://sepolia.basescan.org',
 } as const;
 
 export const BUNDLR_CONFIG = {

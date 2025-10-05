@@ -41,8 +41,8 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
     toast.success('Reply functionality coming soon');
   };
 
-  const handleViewOnExplorer = () => {
-    const explorerUrl = `https://explorer.solana.com/tx/${message.transactionSignature}?cluster=devnet`;
+  const handleViewOnExplorer = (): void => {
+    const explorerUrl = `https://basescan.org/tx/${message.transactionSignature}`;
     window.open(explorerUrl, '_blank');
   };
 
@@ -70,7 +70,9 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
               <div className="flex items-center space-x-2">
                 <span className="font-mono text-xs">{formatAddress(message.sender)}</span>
                 <button
-                  onClick={() => copyToClipboard(message.sender, 'sender')}
+                  onClick={async (): Promise<void> => {
+                    await copyToClipboard(message.sender, 'sender');
+                  }}
                   className="p-1 hover:bg-gray-200 rounded transition-colors"
                 >
                   {copiedField === 'sender' ? (
@@ -87,7 +89,9 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
               <div className="flex items-center space-x-2">
                 <span className="font-mono text-xs">{formatAddress(message.recipient)}</span>
                 <button
-                  onClick={() => copyToClipboard(message.recipient, 'recipient')}
+                  onClick={async (): Promise<void> => {
+                    await copyToClipboard(message.recipient, 'recipient');
+                  }}
                   className="p-1 hover:bg-gray-200 rounded transition-colors"
                 >
                   {copiedField === 'recipient' ? (
@@ -109,7 +113,9 @@ const MessageModal: React.FC<MessageModalProps> = ({ message, onClose }) => {
               <div className="flex items-center space-x-2">
                 <span className="font-mono text-xs">{formatAddress(message.transactionSignature || 'N/A')}</span>
                 <button
-                  onClick={() => copyToClipboard(message.transactionSignature || 'N/A', 'tx')}
+                  onClick={async (): Promise<void> => {
+                    await copyToClipboard(message.transactionSignature || 'N/A', 'tx');
+                  }}
                   className="p-1 hover:bg-gray-200 rounded transition-colors"
                 >
                   {copiedField === 'tx' ? (

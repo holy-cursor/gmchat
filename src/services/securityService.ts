@@ -187,7 +187,7 @@ class SecurityService {
       /(.)\1{10,}/g, // Repeated characters
       /https?:\/\/[^\s]+/g, // URLs
       /[A-Z]{10,}/g, // Excessive caps
-      /[!@#$%^&*()_+=\[\]{}|;':",./<>?]{5,}/g // Excessive special characters
+      /[!@#$%^&*()_+=[\]{}|;':",./<>?]{5,}/g // Excessive special characters
     ];
 
     for (const pattern of spamPatterns) {

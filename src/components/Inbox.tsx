@@ -108,7 +108,7 @@ const Inbox: React.FC<InboxProps> = ({ onMessageSelect, isConnected }) => {
             <MessageCard
               key={message.id}
               message={message}
-              onClick={() => onMessageSelect(message)}
+              onClick={(): void => onMessageSelect(message)}
               type="inbox"
             />
           ))}

@@ -9,16 +9,16 @@ interface ContactTagModalProps {
     displayName: string;
     customTag?: string;
   } | null;
-  onSave: (address: string, customTag: string) => void;
-  onRemove: (address: string) => void;
+  onSaveTag: (address: string, customTag: string) => void;
+  onRemoveTag: (address: string) => void;
 }
 
 const ContactTagModal: React.FC<ContactTagModalProps> = ({
   isOpen,
   onClose,
   contact,
-  onSave,
-  onRemove,
+  onSaveTag,
+  onRemoveTag,
 }) => {
   const [customTag, setCustomTag] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -34,15 +34,15 @@ const ContactTagModal: React.FC<ContactTagModalProps> = ({
 
   const handleSave = () => {
     if (customTag.trim()) {
-      onSave(contact.address, customTag.trim());
+      onSaveTag(contact.address, customTag.trim());
     } else {
-      onRemove(contact.address);
+      onRemoveTag(contact.address);
     }
     onClose();
   };
 
   const handleRemove = () => {
-    onRemove(contact.address);
+    onRemoveTag(contact.address);
     onClose();
   };
 
@@ -97,7 +97,7 @@ const ContactTagModal: React.FC<ContactTagModalProps> = ({
               <input
                 type="text"
                 value={customTag}
-                onChange={(e) => setCustomTag(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomTag(e.target.value)}
                 placeholder="Enter a custom name for this contact..."
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                 maxLength={50}

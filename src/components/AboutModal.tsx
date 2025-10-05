@@ -1,13 +1,16 @@
 import React from 'react';
-import { X, MessageCircle, Users, Wallet, Shield } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface AboutModalProps {
+  isOpen: boolean;
   onClose: () => void;
 }
 
-const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
+const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   const { isDark } = useTheme();
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -33,19 +36,19 @@ const AboutModal: React.FC<AboutModalProps> = ({ onClose }) => {
           
           <div className={`space-y-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             <p>
-              Parc3l is a simple and seamless way to send and receive decentralized messages on Solana.
+              Parc3l is a decentralized messaging app built as a Base Mini App, enabling seamless communication on the Base blockchain.
             </p>
             
             <p>
-              <strong>Core idea:</strong> Every message is sent with a SOL transfer to ensure on-chain permanence and direct wallet-to-wallet communication.
+              <strong>Core idea:</strong> Every message is sent with a small ETH transfer to ensure on-chain permanence and direct wallet-to-wallet communication.
             </p>
             
             <p>
-              <strong>Why it's different:</strong> No signups, no hidden costs — just connect your wallet and start messaging. Create group chats with multiple wallets.
+              <strong>Why it's different:</strong> No signups, no hidden costs — just connect your Base wallet and start messaging. Built specifically for the Base ecosystem.
             </p>
             
             <p>
-              <strong>SOL transfer model:</strong> Sending messages includes a small SOL transfer (0.001 SOL) plus Solana network gas fees.
+              <strong>ETH transfer model:</strong> Sending messages includes a small ETH transfer (0.001 ETH) plus Base network gas fees.
             </p>
             
             <p>

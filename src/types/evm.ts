@@ -170,23 +170,61 @@ export const TESTNET_EVM_CHAINS: EVMChain[] = [
   {
     id: 11155111,
     name: 'Sepolia',
-    rpcUrl: 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY',
+    rpcUrl: 'https://eth-sepolia.g.alchemy.com/v2/y5tMYX73TU3zfFeTr4YEi',
     nativeCurrency: {
       name: 'Ethereum',
       symbol: 'ETH',
       decimals: 18,
     },
     blockExplorerUrl: 'https://sepolia.etherscan.io',
+    iconUrl: 'https://cryptologos.cc/logos/ethereum-eth-logo.png',
   },
   {
     id: 80001,
     name: 'Mumbai',
-    rpcUrl: 'https://polygon-mumbai.infura.io/v3/YOUR_INFURA_KEY',
+    rpcUrl: 'https://rpc-mumbai.maticvigil.com',
     nativeCurrency: {
       name: 'Polygon',
       symbol: 'MATIC',
       decimals: 18,
     },
     blockExplorerUrl: 'https://mumbai.polygonscan.com',
+    iconUrl: 'https://cryptologos.cc/logos/polygon-matic-logo.png',
+  },
+  {
+    id: 97,
+    name: 'BSC Testnet',
+    rpcUrl: 'https://data-seed-prebsc-1-s1.binance.org:8545',
+    nativeCurrency: {
+      name: 'BNB',
+      symbol: 'BNB',
+      decimals: 18,
+    },
+    blockExplorerUrl: 'https://testnet.bscscan.com',
+    iconUrl: 'https://cryptologos.cc/logos/bnb-bnb-logo.png',
+  },
+  {
+    id: 421614,
+    name: 'Arbitrum Sepolia',
+    rpcUrl: 'https://sepolia-rollup.arbitrum.io/rpc',
+    nativeCurrency: {
+      name: 'Ethereum',
+      symbol: 'ETH',
+      decimals: 18,
+    },
+    blockExplorerUrl: 'https://sepolia.arbiscan.io',
+    iconUrl: 'https://cryptologos.cc/logos/arbitrum-arb-logo.png',
+  },
+  {
+    id: 420,
+    name: 'Optimism Sepolia',
+    rpcUrl: 'https://sepolia.optimism.io',
+    nativeCurrency: {
+      name: 'Ethereum',
+      symbol: 'ETH',
+      decimals: 18,
+    },
+    blockExplorerUrl: 'https://sepolia-optimism.etherscan.io',
+    iconUrl: 'https://cryptologos.cc/logos/optimism-op-logo.png',
   },
 ];

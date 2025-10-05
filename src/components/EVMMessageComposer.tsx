@@ -3,7 +3,7 @@ import { Send, Wallet, AlertCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useEVMWallet } from '../contexts/EVMWalletContext';
 import ChainSelector from './ChainSelector';
-import { SUPPORTED_EVM_CHAINS } from '../types/evm';
+import { SUPPORTED_EVM_CHAINS, TESTNET_EVM_CHAINS } from '../types/evm';
 
 interface EVMMessageComposerProps {
   onSendMessage: (recipient: string, content: string, chainId: number) => Promise<void>;
@@ -20,7 +20,7 @@ const EVMMessageComposer: React.FC<EVMMessageComposerProps> = ({
   const { isConnected, address, currentChain, balance, error, clearError } = useEVMWallet();
   const [recipient, setRecipient] = useState('');
   const [content, setContent] = useState('');
-  const [selectedChainId, setSelectedChainId] = useState<number>(1); // Default to Ethereum
+  const [selectedChainId, setSelectedChainId] = useState<number>(11155111); // Default to Sepolia testnet
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +28,11 @@ const EVMMessageComposer: React.FC<EVMMessageComposerProps> = ({
     if (!recipient.trim() || !content.trim()) {
       return;
     }
+
+    // Debug logging (commented out for production)
+    // console.log('EVMMessageComposer - isConnected:', isConnected);
+    // console.log('EVMMessageComposer - address:', address);
+    // console.log('EVMMessageComposer - currentChain:', currentChain);
 
     if (!isConnected) {
       alert('Please connect your EVM wallet first');
@@ -63,7 +68,7 @@ const EVMMessageComposer: React.FC<EVMMessageComposerProps> = ({
           </span>
           <button
             onClick={clearError}
-            className={`ml-auto text-xs px-2 py-1 rounded ${
+            className={`ml-auto text-xs px-2 py-1 rounded transition-colors ${
               isDark ? 'text-red-300 hover:bg-red-800' : 'text-red-600 hover:bg-red-100'
             }`}
           >
@@ -130,7 +135,7 @@ const EVMMessageComposer: React.FC<EVMMessageComposerProps> = ({
             <input
               type="text"
               value={recipient}
-              onChange={(e) => setRecipient(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRecipient(e.target.value)}
               placeholder="0x..."
               disabled={disabled || isSending}
               className={`w-full px-4 py-3 rounded-2xl border transition-colors ${
@@ -155,7 +160,7 @@ const EVMMessageComposer: React.FC<EVMMessageComposerProps> = ({
             </label>
             <textarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContent(e.target.value)}
               placeholder="Type your message..."
               rows={3}
               disabled={disabled || isSending}
@@ -198,7 +203,7 @@ const EVMMessageComposer: React.FC<EVMMessageComposerProps> = ({
           <div className={`text-xs text-center ${
             isDark ? 'text-gray-500' : 'text-gray-400'
           }`}>
-            Messages are sent with a small {SUPPORTED_EVM_CHAINS.find(c => c.id === selectedChainId)?.nativeCurrency.symbol || 'ETH'} transfer
+            Messages are sent with a small {[...TESTNET_EVM_CHAINS, ...SUPPORTED_EVM_CHAINS].find(c => c.id === selectedChainId)?.nativeCurrency.symbol || 'ETH'} transfer
           </div>
         </form>
       )}

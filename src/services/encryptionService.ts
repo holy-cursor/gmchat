@@ -172,8 +172,8 @@ class EncryptionService {
   /**
    * Check if a message is encrypted
    */
-  static isMessageEncrypted(message: any): boolean {
-    return message.isEncrypted === true && message.encryptedContent;
+  static isMessageEncrypted(message: unknown): boolean {
+    return (message as any).isEncrypted === true && (message as any).encryptedContent;
   }
 
   /**

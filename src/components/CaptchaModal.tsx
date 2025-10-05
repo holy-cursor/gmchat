@@ -121,7 +121,7 @@ const CaptchaModal: React.FC<CaptchaModalProps> = ({ isOpen, onClose, onVerify }
               <input
                 type="number"
                 value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUserAnswer(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Enter your answer..."
                 className={`w-full px-4 py-3 border rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm shadow-lg ${

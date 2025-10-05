@@ -1,17 +1,13 @@
-import { Message, Contact, Conversation, Group } from '../types';
+import { Message, Contact, Conversation } from '../types';
 import EncryptionService from './encryptionService';
 
 export interface StoredMessage extends Message {
   // StoredMessage is the same as Message, no additional fields needed
 }
 
-export interface StoredGroup extends Group {
-  id: string;
-}
 
 export class MessageStorageService {
   private static readonly STORAGE_KEY = 'dotmsg_messages';
-  private static readonly GROUPS_KEY = 'dotmsg_groups';
 
   /**
    * Store a new message
@@ -27,7 +23,6 @@ export class MessageStorageService {
     messages.push(storedMessage);
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(messages));
 
-    console.log('Message stored:', storedMessage);
     return storedMessage;
   }
 
@@ -49,7 +44,6 @@ export class MessageStorageService {
         content: encryptedData.content,
         encryptedContent: encryptedData.encryptedContent,
         isEncrypted: true,
-        encryptionKey: encryptedData.encryptionKey
       };
 
       return this.storeMessage(encryptedMessage);
@@ -63,30 +57,6 @@ export class MessageStorageService {
   /**
    * Store an encrypted message for a group
    */
-  static storeEncryptedGroupMessage(message: Omit<StoredMessage, 'id' | 'timestamp'>, groupId: string): StoredMessage {
-    try {
-      // Encrypt the message content for group
-      const encryptedData = EncryptionService.encryptGroupMessage(
-        message.content,
-        groupId
-      );
-
-      // Create encrypted message
-      const encryptedMessage: Omit<StoredMessage, 'id' | 'timestamp'> = {
-        ...message,
-        content: encryptedData.content,
-        encryptedContent: encryptedData.encryptedContent,
-        isEncrypted: true,
-        encryptionKey: encryptedData.encryptionKey
-      };
-
-      return this.storeMessage(encryptedMessage);
-    } catch (error) {
-      console.error('Failed to encrypt group message:', error);
-      // Fallback to storing unencrypted message
-      return this.storeMessage(message);
-    }
-  }
 
 
   /**
@@ -122,15 +92,26 @@ export class MessageStorageService {
   }
 
   /**
-   * Get all messages from storage
+   * Get all messages from storage (public access)
    */
-  private static getAllMessages(): StoredMessage[] {
+  static getAllMessages(): StoredMessage[] {
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       console.error('Error reading messages from storage:', error);
       return [];
+    }
+  }
+
+  /**
+   * Set all messages in storage
+   */
+  static setMessages(messages: StoredMessage[]): void {
+    try {
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(messages));
+    } catch (error) {
+      console.error('Error setting messages in storage:', error);
     }
   }
 
@@ -197,9 +178,6 @@ export class MessageStorageService {
     const allMessages = this.getAllMessages();
     const contactMap = new Map<string, Contact>();
 
-    // Get all group wallet addresses to exclude them from contacts
-    const allGroups = this.getAllGroups();
-    const groupWallets = allGroups.map(group => group.groupWallet);
 
     allMessages.forEach(message => {
       // Filter by chain type if specified
@@ -219,10 +197,6 @@ export class MessageStorageService {
         return; // Skip messages not involving this wallet
       }
 
-      // Skip group wallet addresses - they shouldn't appear as contacts
-      if (groupWallets.includes(contactAddress)) {
-        return;
-      }
 
       if (!contactMap.has(contactAddress)) {
         contactMap.set(contactAddress, {
@@ -302,26 +276,9 @@ export class MessageStorageService {
       return null;
     }
 
-    // Decrypt messages if they are encrypted
-    const decryptedMessages = conversationMessages.map(message => {
-      if (message.isEncrypted && message.encryptedContent) {
-        try {
-          const decryptedContent = EncryptionService.decryptMessageData(
-            message as any,
-            walletAddress,
-            contactAddress
-          );
-          return {
-            ...message,
-            content: decryptedContent
-          };
-        } catch (error) {
-          console.error('Failed to decrypt message:', error);
-          return message; // Return original message if decryption fails
-        }
-      }
-      return message;
-    });
+    // For now, just return the messages as-is since we store both plain text and encrypted content
+    // The content field already contains the plain text for display
+    const decryptedMessages = conversationMessages;
 
     const contact: Contact = {
       address: contactAddress,
@@ -340,29 +297,6 @@ export class MessageStorageService {
     };
   }
 
-  /**
-   * Get conversation for a specific group
-   */
-  static getGroupConversation(walletAddress: string, groupId: string): Conversation | null {
-    const group = this.getGroupById(groupId);
-    if (!group) return null;
-
-    // Get all messages for this group by filtering messages sent to the group wallet
-    const allMessages = this.getAllMessages();
-    
-    const conversationMessages = allMessages
-      .filter(message => {
-        // Include messages sent to the group wallet
-        return message.recipient === group.groupWallet;
-      })
-      .sort((a, b) => a.timestamp - b.timestamp);
-
-    return {
-      group,
-      messages: conversationMessages,
-      totalMessages: conversationMessages.length,
-    };
-  }
 
   /**
    * Mark messages as read for a specific contact
@@ -381,25 +315,6 @@ export class MessageStorageService {
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedMessages));
   }
 
-  /**
-   * Mark group messages as read for a specific group
-   */
-  static markGroupConversationAsRead(walletAddress: string, groupId: string): void {
-    const group = this.getGroupById(groupId);
-    if (!group) return;
-    
-    const allMessages = this.getAllMessages();
-    const updatedMessages = allMessages.map(message => {
-      if (message.recipient === group.groupWallet && 
-          message.sender !== walletAddress && 
-          !message.isRead) {
-        return { ...message, isRead: true };
-      }
-      return message;
-    });
-
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedMessages));
-  }
 
   /**
    * Get unread count for a specific contact
@@ -425,10 +340,7 @@ export class MessageStorageService {
     ).length;
     
     // Count group messages where user is a member
-    const groups = this.getGroupsForWallet(walletAddress);
-    const groupUnreadCount = groups.reduce((total, group) => total + group.unreadCount, 0);
-    
-    return directUnreadCount + groupUnreadCount;
+    return directUnreadCount;
   }
 
   /**
@@ -471,130 +383,5 @@ export class MessageStorageService {
     return customTag || this.formatAddress(contactAddress);
   }
 
-  // ===== GROUP MANAGEMENT METHODS =====
 
-  /**
-   * Get all groups from localStorage
-   */
-  static getAllGroups(): StoredGroup[] {
-    try {
-      const groups = localStorage.getItem(this.GROUPS_KEY);
-      return groups ? JSON.parse(groups) : [];
-    } catch (error) {
-      console.error('Error loading groups:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Store a new group
-   */
-  static storeGroup(groupData: { name: string; description: string; members: string[]; createdBy: string }): StoredGroup {
-    const group: StoredGroup = {
-      id: this.generateGroupId(),
-      name: groupData.name,
-      description: groupData.description,
-      members: groupData.members,
-      createdBy: groupData.createdBy,
-      groupWallet: this.generateGroupWalletAddress(),
-      createdAt: Date.now(),
-      unreadCount: 0,
-      lastActivity: Date.now(),
-    };
-
-    const groups = this.getAllGroups();
-    groups.push(group);
-    localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
-
-    console.log('Group stored:', group);
-    return group;
-  }
-
-  /**
-   * Get groups for a specific wallet address (where user is a member)
-   */
-  static getGroupsForWallet(walletAddress: string): StoredGroup[] {
-    const allGroups = this.getAllGroups();
-    const userGroups = allGroups.filter(group => group.members.includes(walletAddress));
-    
-    // Calculate unread counts and last message for each group
-    return userGroups.map(group => {
-      const allMessages = this.getAllMessages();
-      
-      // Get all messages sent to this group's wallet
-      const groupMessages = allMessages
-        .filter(message => message.recipient === group.groupWallet)
-        .sort((a, b) => a.timestamp - b.timestamp);
-      
-      // Calculate unread count (messages not sent by current user and not read)
-      const unreadCount = groupMessages.filter(message => 
-        message.sender !== walletAddress && !message.isRead
-      ).length;
-      
-      // Get last message
-      const lastMessage = groupMessages.length > 0 ? groupMessages[groupMessages.length - 1] : undefined;
-      
-      // Calculate last activity
-      const lastActivity = groupMessages.length > 0 
-        ? Math.max(...groupMessages.map(m => m.timestamp))
-        : group.createdAt;
-      
-      return {
-        ...group,
-        unreadCount,
-        lastMessage,
-        lastActivity,
-      };
-    }).sort((a, b) => b.lastActivity - a.lastActivity); // Most recent first
-  }
-
-  /**
-   * Get a specific group by ID
-   */
-  static getGroupById(groupId: string): StoredGroup | null {
-    const groups = this.getAllGroups();
-    return groups.find(group => group.id === groupId) || null;
-  }
-
-  /**
-   * Update group data
-   */
-  static updateGroup(groupId: string, updates: Partial<StoredGroup>): void {
-    const groups = this.getAllGroups();
-    const groupIndex = groups.findIndex(group => group.id === groupId);
-    
-    if (groupIndex !== -1) {
-      groups[groupIndex] = { ...groups[groupIndex], ...updates };
-      localStorage.setItem(this.GROUPS_KEY, JSON.stringify(groups));
-    }
-  }
-
-  /**
-   * Delete a group
-   */
-  static deleteGroup(groupId: string): void {
-    const groups = this.getAllGroups();
-    const filteredGroups = groups.filter(group => group.id !== groupId);
-    localStorage.setItem(this.GROUPS_KEY, JSON.stringify(filteredGroups));
-  }
-
-  /**
-   * Generate unique group ID
-   */
-  private static generateGroupId(): string {
-    return `group_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  /**
-   * Generate a unique wallet address for a group
-   */
-  private static generateGroupWalletAddress(): string {
-    // Generate a mock wallet address for the group (44 characters like real Solana addresses)
-    const chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
-    let result = '';
-    for (let i = 0; i < 44; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-  }
 }

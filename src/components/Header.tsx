@@ -1,16 +1,26 @@
 import React from 'react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { Settings, HelpCircle, Info, Moon, Sun, LogOut } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import PrivacySettings from './PrivacySettings';
+import { WalletType } from './UnifiedWalletButtonRainbow';
 
 interface HeaderProps {
   onOpenAbout: () => void;
   unreadCount?: number;
   onNewMessage: () => void;
+  selectedWalletType?: WalletType;
+  onWalletTypeChange?: (type: WalletType) => void;
+  walletButton?: React.ReactNode;
 }
 
-const Header: React.FC<HeaderProps> = ({ onOpenAbout, unreadCount = 0, onNewMessage }) => {
+const Header: React.FC<HeaderProps> = ({ 
+  onOpenAbout, 
+  unreadCount = 0, 
+  onNewMessage, 
+  selectedWalletType = 'solana',
+  onWalletTypeChange,
+  walletButton
+}) => {
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false);
   const [isPrivacySettingsOpen, setIsPrivacySettingsOpen] = React.useState(false);
   const { isDark, toggleTheme } = useTheme();
@@ -69,17 +79,16 @@ const Header: React.FC<HeaderProps> = ({ onOpenAbout, unreadCount = 0, onNewMess
             </svg>
           </button>
           
-          <div className="relative">
-            <WalletMultiButton className={`!text-white !px-4 sm:!px-6 !py-3 !rounded-2xl !text-sm !font-semibold !transition-all !duration-200 !shadow-lg hover:!shadow-xl !transform hover:!scale-105 ${
-              isDark 
-                ? '!bg-gradient-to-r !from-green-500 !to-emerald-600 hover:!from-green-600 hover:!to-emerald-700' 
-                : '!bg-gradient-to-r !from-green-400 !to-green-600 hover:!from-green-500 hover:!to-green-700'
-            }`} />
-          </div>
+          {/* Unified Wallet Button */}
+          {walletButton || (
+            <div className="text-sm text-gray-500">
+              Wallet button not provided
+            </div>
+          )}
           
           <div className="relative">
             <button
-              onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+              onClick={(): void => setIsSettingsOpen(!isSettingsOpen)}
               className={`p-3 rounded-2xl transition-all duration-200 hover:shadow-md ${
                 isDark 
                   ? 'hover:bg-gray-800/50 text-gray-300 hover:text-white' 
@@ -104,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAbout, unreadCount = 0, onNewMess
                   Help & Support
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={(): void => {
                     setIsPrivacySettingsOpen(true);
                     setIsSettingsOpen(false);
                   }}
@@ -118,7 +127,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAbout, unreadCount = 0, onNewMess
                   Privacy & Security
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={(): void => {
                     onOpenAbout();
                     setIsSettingsOpen(false);
                   }}
@@ -132,7 +141,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAbout, unreadCount = 0, onNewMess
                   About
                 </button>
                 <button 
-                  onClick={() => {
+                  onClick={(): void => {
                     toggleTheme();
                     setIsSettingsOpen(false);
                   }}

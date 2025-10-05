@@ -10,10 +10,13 @@ export interface Message {
   groupId?: string; // For group messages
   isEncrypted?: boolean;
   encryptedContent?: string;
-  encryptionKey?: string;
+  nonce?: string;
+  publicKey?: string;
   // EVM support
   chainType?: 'solana' | 'evm';
   chainId?: number; // For EVM messages
+  // IPFS support
+  ipfsHash?: string;
 }
 
 export interface MessageMetadata {
@@ -54,23 +57,9 @@ export interface Contact {
   isOnline?: boolean;
 }
 
-export interface Group {
-  id: string;
-  name: string;
-  description?: string;
-  members: string[]; // Array of wallet addresses
-  createdBy: string; // Creator's wallet address
-  groupWallet: string; // Unique wallet address for this group
-  createdAt: number;
-  lastMessage?: Message;
-  unreadCount: number;
-  lastActivity: number;
-  isOnline?: boolean;
-}
 
 export interface Conversation {
   contact?: Contact;
-  group?: Group;
   messages: Message[];
   totalMessages: number;
 }

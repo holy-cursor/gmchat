@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Conversation, Message } from '../types';
-import { Send, ArrowLeft, Copy, ExternalLink, User, Users, Trash2 } from 'lucide-react';
+import { Send, ArrowLeft, Copy, ExternalLink, User } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { MessageStorageService } from '../services/messageStorage';
 import SecurityIndicator from './SecurityIndicator';
@@ -11,8 +11,6 @@ interface ConversationViewProps {
   onSendMessage: (content: string) => void;
   isSending: boolean;
   currentWalletAddress: string;
-  onDeleteGroup?: (groupId: string) => void;
-  onOpenGroupMembers?: () => void;
 }
 
 const ConversationView: React.FC<ConversationViewProps> = ({
@@ -21,8 +19,6 @@ const ConversationView: React.FC<ConversationViewProps> = ({
   onSendMessage,
   isSending,
   currentWalletAddress,
-  onDeleteGroup,
-  onOpenGroupMembers,
 }) => {
   const { isDark } = useTheme();
   const [messageInput, setMessageInput] = React.useState('');
@@ -61,12 +57,9 @@ const ConversationView: React.FC<ConversationViewProps> = ({
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
-  const getSenderDisplayName = (senderAddress: string, isGroup: boolean) => {
-    if (!isGroup) return null;
-    
-    // For group messages, try to get custom tag first, then fallback to formatted address
-    // We need to check if this sender has a custom tag in the current wallet's contacts
-    const customTag = getCustomTagForAddress(senderAddress);
+  const getSenderDisplayName = (senderAddress: string) => {
+    // For direct messages, try to get custom tag first, then fallback to formatted address
+    const customTag = MessageStorageService.getContactTag(currentWalletAddress, senderAddress);
     return customTag || formatAddress(senderAddress);
   };
 
@@ -117,7 +110,7 @@ const ConversationView: React.FC<ConversationViewProps> = ({
       }`}>
         <div className="flex items-center space-x-4">
           <button
-            onClick={() => {
+            onClick={(): void => {
               console.log('Back button clicked');
               onBack();
             }}
@@ -134,39 +127,27 @@ const ConversationView: React.FC<ConversationViewProps> = ({
           
           <div className="flex items-center space-x-3 flex-1 min-w-0">
             <div className={`w-12 h-12 rounded-3xl flex items-center justify-center shadow-lg flex-shrink-0 ${
-              conversation.group 
-                ? (isDark 
-                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600' 
-                    : 'bg-gradient-to-br from-blue-400 to-indigo-600')
-                : (isDark 
-                    ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
-                    : 'bg-gradient-to-br from-green-400 to-green-600')
+              isDark 
+                ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                : 'bg-gradient-to-br from-green-400 to-green-600'
             }`}>
-              {conversation.group ? (
-                <Users className="w-6 h-6 text-white" />
-              ) : (
-                <User className="w-6 h-6 text-white" />
-              )}
+              <User className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <h2 className={`text-lg font-bold truncate ${
                 isDark ? 'text-white' : 'text-gray-900'
               }`}>
-                {conversation.group ? conversation.group.name : conversation.contact?.displayName}
+                {conversation.contact?.displayName}
               </h2>
               <div className="flex items-center space-x-2">
                 <p className={`text-sm truncate ${
                   isDark ? 'text-gray-400' : 'text-gray-600'
                 }`}>
-                  {conversation.group 
-                    ? `${conversation.group.members.length} members`
-                    : formatAddress(conversation.contact?.address || '')
-                  }
+                  {formatAddress(conversation.contact?.address || '')}
                 </p>
                 <SecurityIndicator
                   walletAddress={currentWalletAddress}
                   contactAddress={conversation.contact?.address}
-                  groupId={conversation.group?.id}
                   messageCount={conversation.messages.length}
                 />
               </div>
@@ -177,7 +158,7 @@ const ConversationView: React.FC<ConversationViewProps> = ({
             {conversation.contact && (
               <>
                 <button
-                  onClick={() => copyToClipboard(conversation.contact!.address, 'address')}
+                  onClick={(): void => copyToClipboard(conversation.contact!.address, 'address')}
                   className={`p-2.5 rounded-2xl transition-all duration-200 hover:shadow-md ${
                     isDark 
                       ? 'hover:bg-gray-800' 
@@ -190,7 +171,9 @@ const ConversationView: React.FC<ConversationViewProps> = ({
                   }`} />
                 </button>
                 <button
-                  onClick={() => window.open(`https://explorer.solana.com/address/${conversation.contact!.address}?cluster=devnet`, '_blank')}
+                  onClick={(): void => {
+                    window.open(`https://basescan.org/address/${conversation.contact!.address}`, '_blank');
+                  }}
                   className={`p-2.5 rounded-2xl transition-all duration-200 hover:shadow-md ${
                     isDark 
                       ? 'hover:bg-gray-800' 
@@ -204,63 +187,6 @@ const ConversationView: React.FC<ConversationViewProps> = ({
                 </button>
               </>
             )}
-            {conversation.group && (
-              <>
-                <button
-                  onClick={() => copyToClipboard(conversation.group!.id, 'group-id')}
-                  className={`p-2.5 rounded-2xl transition-all duration-200 hover:shadow-md ${
-                    isDark 
-                      ? 'hover:bg-gray-800' 
-                      : 'hover:bg-gray-100'
-                  }`}
-                  title="Copy group ID"
-                >
-                  <Copy className={`w-5 h-5 ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (onOpenGroupMembers) {
-                      onOpenGroupMembers();
-                    } else {
-                      // Fallback: copy member addresses
-                      const membersList = conversation.group!.members.join('\n');
-                      copyToClipboard(membersList, 'group-members');
-                    }
-                  }}
-                  className={`p-2.5 rounded-2xl transition-all duration-200 hover:shadow-md ${
-                    isDark 
-                      ? 'hover:bg-gray-800' 
-                      : 'hover:bg-gray-100'
-                  }`}
-                  title={onOpenGroupMembers ? "View group members" : "Copy member addresses"}
-                >
-                  <Users className={`w-5 h-5 ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`} />
-                </button>
-                {onDeleteGroup && (
-                  <button
-                    onClick={() => {
-                      if (window.confirm(`Are you sure you want to delete the group "${conversation.group!.name}"? This action cannot be undone.`)) {
-                        onDeleteGroup(conversation.group!.id);
-                      }
-                    }}
-                    className={`p-2.5 rounded-2xl transition-all duration-200 hover:shadow-md ${
-                      isDark 
-                        ? 'hover:bg-red-900/50' 
-                        : 'hover:bg-red-100'
-                    }`}
-                    title="Delete group"
-                  >
-                    <Trash2 className={`w-5 h-5 ${
-                      isDark ? 'text-red-400' : 'text-red-600'
-                    }`} />
-                  </button>
-                )}
-              </>
-            )}
           </div>
         </div>
       </div>
@@ -270,8 +196,7 @@ const ConversationView: React.FC<ConversationViewProps> = ({
         {conversation.messages.map((message) => {
           const isFromCurrentUser = message.sender === currentWalletAddress;
           const isReceived = !isFromCurrentUser;
-          const isGroup = !!conversation.group;
-          const senderDisplayName = getSenderDisplayName(message.sender, isGroup);
+          const senderDisplayName = getSenderDisplayName(message.sender);
 
           return (
             <div
@@ -280,7 +205,7 @@ const ConversationView: React.FC<ConversationViewProps> = ({
             >
               <div className={`max-w-xs sm:max-w-sm lg:max-w-md ${isFromCurrentUser ? 'items-end' : 'items-start'} flex flex-col`}>
                 {/* Sender identifier for group messages */}
-                {isGroup && !isFromCurrentUser && senderDisplayName && (
+                {!isFromCurrentUser && senderDisplayName && (
                   <div className={`text-sm font-medium mb-1 px-3 ${
                     isDark ? 'text-gray-400' : 'text-gray-600'
                   }`}>
@@ -312,7 +237,7 @@ const ConversationView: React.FC<ConversationViewProps> = ({
                     </span>
                     {message.transactionSignature && (
                       <button
-                        onClick={() => copyToClipboard(message.transactionSignature!, 'tx')}
+                        onClick={(): void => copyToClipboard(message.transactionSignature!, 'tx')}
                         className={`ml-2 p-1 rounded ${
                           isFromCurrentUser ? 'hover:bg-purple-700' : 'hover:bg-gray-200'
                         }`}
@@ -340,7 +265,7 @@ const ConversationView: React.FC<ConversationViewProps> = ({
           <input
             type="text"
             value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMessageInput(e.target.value)}
             placeholder="Type a message..."
             className={`flex-1 px-4 py-3 border rounded-3xl focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200 shadow-lg hover:shadow-xl text-sm ${
               isDark 

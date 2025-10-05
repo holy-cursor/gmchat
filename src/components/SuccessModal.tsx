@@ -3,15 +3,14 @@ import React, { useEffect } from 'react';
 interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
+  message: string;
   transactionSignature: string;
-  recipientAddress: string;
-  messageContent: string;
-  isRealMode: boolean;
 }
 
 const SuccessModal: React.FC<SuccessModalProps> = ({
   isOpen,
   onClose,
+  message,
   transactionSignature,
 }) => {
   // Auto-close after 3 seconds
@@ -35,7 +34,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
           </svg>
         </div>
         <div className="flex-1">
-          <p className="font-medium text-sm">Message sent!</p>
+          <p className="font-medium text-sm">{message}</p>
           <p className="text-xs opacity-90">Tx: {transactionSignature.slice(0, 8)}...</p>
         </div>
         <button

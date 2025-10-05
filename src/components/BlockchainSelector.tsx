@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
-export type BlockchainType = 'solana' | 'evm';
+export type BlockchainType = 'base';
 
 interface BlockchainOption {
   id: BlockchainType;
@@ -14,17 +14,10 @@ interface BlockchainOption {
 
 const BLOCKCHAIN_OPTIONS: BlockchainOption[] = [
   {
-    id: 'solana',
-    name: 'Solana',
-    description: 'Fast, low-cost transactions',
-    icon: '🟣',
-    color: 'from-purple-500 to-pink-500',
-  },
-  {
-    id: 'evm',
-    name: 'EVM Chains',
-    description: 'Ethereum, Polygon, Arbitrum, etc.',
-    icon: '🔷',
+    id: 'base',
+    name: 'Base',
+    description: 'Coinbase\'s L2 - Fast & Social',
+    icon: '🔵',
     color: 'from-blue-500 to-cyan-500',
   },
 ];
@@ -53,7 +46,11 @@ const BlockchainSelector: React.FC<BlockchainSelectorProps> = ({
   return (
     <div className="relative">
       <button
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={(): void => {
+          if (!disabled) {
+            setIsOpen(!isOpen);
+          }
+        }}
         disabled={disabled}
         className={`flex items-center justify-between w-full px-4 py-3 rounded-2xl border transition-all duration-200 ${
           disabled
@@ -89,7 +86,7 @@ const BlockchainSelector: React.FC<BlockchainSelectorProps> = ({
             {BLOCKCHAIN_OPTIONS.map((option) => (
               <button
                 key={option.id}
-                onClick={() => handleSelect(option.id)}
+                onClick={(): void => handleSelect(option.id)}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
                   selectedBlockchain === option.id
                     ? isDark

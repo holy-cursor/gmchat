@@ -352,10 +352,10 @@ export class ShyftNFTService {
       const nftData = await response.json();
       
       // Extract message metadata from NFT attributes
-      const sender = nftData.attributes?.find((attr: any) => attr.trait_type === 'Sender')?.value || 'Unknown';
-      const recipient = nftData.attributes?.find((attr: any) => attr.trait_type === 'Recipient')?.value || 'Unknown';
-      const messageType = nftData.attributes?.find((attr: any) => attr.trait_type === 'Message Type')?.value || 'text';
-      const timestamp = nftData.attributes?.find((attr: any) => attr.trait_type === 'Timestamp')?.value || Date.now().toString();
+      const sender = nftData.attributes?.find((attr: { trait_type: string; value: string }) => attr.trait_type === 'Sender')?.value || 'Unknown';
+      const recipient = nftData.attributes?.find((attr: { trait_type: string; value: string }) => attr.trait_type === 'Recipient')?.value || 'Unknown';
+      const messageType = nftData.attributes?.find((attr: { trait_type: string; value: string }) => attr.trait_type === 'Message Type')?.value || 'text';
+      const timestamp = nftData.attributes?.find((attr: { trait_type: string; value: string }) => attr.trait_type === 'Timestamp')?.value || Date.now().toString();
 
       return {
         sender,

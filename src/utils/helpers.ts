@@ -107,17 +107,15 @@ export const validateMessageContent = (content: string): { isValid: boolean; err
 /**
  * Get explorer URL for a transaction
  */
-export const getExplorerUrl = (signature: string, network: string = 'devnet'): string => {
-  const baseUrl = 'https://explorer.solana.com';
-  const cluster = network === 'mainnet-beta' ? '' : `?cluster=${network}`;
-  return `${baseUrl}/tx/${signature}${cluster}`;
+export const getExplorerUrl = (signature: string, network: string = 'mainnet'): string => {
+  const baseUrl = 'https://basescan.org';
+  return `${baseUrl}/tx/${signature}`;
 };
 
 /**
  * Get explorer URL for an NFT
  */
-export const getNFTExplorerUrl = (mint: string, network: string = 'devnet'): string => {
-  const baseUrl = 'https://explorer.solana.com';
-  const cluster = network === 'mainnet-beta' ? '' : `?cluster=${network}`;
-  return `${baseUrl}/address/${mint}${cluster}`;
+export const getNFTExplorerUrl = (mint: string, network: string = 'mainnet'): string => {
+  const baseUrl = 'https://basescan.org';
+  return `${baseUrl}/address/${mint}`;
 };

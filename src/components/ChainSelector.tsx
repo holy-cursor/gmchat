@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, Check, ExternalLink } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useEVMWallet } from '../contexts/EVMWalletContext';
-import { SUPPORTED_EVM_CHAINS, EVMChain } from '../types/evm';
+import { SUPPORTED_EVM_CHAINS, TESTNET_EVM_CHAINS, EVMChain } from '../types/evm';
 
 interface ChainSelectorProps {
   selectedChainId?: number;
@@ -19,7 +19,9 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
   const { isConnected, switchChain } = useEVMWallet();
   const [isOpen, setIsOpen] = useState(false);
 
-  const selectedChain = SUPPORTED_EVM_CHAINS.find(chain => chain.id === selectedChainId);
+  // Use testnets by default for development
+  const availableChains = [...TESTNET_EVM_CHAINS, ...SUPPORTED_EVM_CHAINS];
+  const selectedChain = availableChains.find(chain => chain.id === selectedChainId);
 
   const handleChainSelect = async (chain: EVMChain) => {
     if (disabled) return;
@@ -41,7 +43,7 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
   return (
     <div className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={(): void => setIsOpen(!isOpen)}
         disabled={disabled}
         className={`flex items-center justify-between w-full px-4 py-3 rounded-2xl border transition-all duration-200 ${
           disabled
@@ -89,10 +91,12 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
           isDark ? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'
         }`}>
           <div className="p-2 max-h-80 overflow-y-auto">
-            {SUPPORTED_EVM_CHAINS.map((chain) => (
+            {availableChains.map((chain) => (
               <button
                 key={chain.id}
-                onClick={() => handleChainSelect(chain)}
+                onClick={async (): Promise<void> => {
+                  await handleChainSelect(chain);
+                }}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-colors ${
                   selectedChainId === chain.id
                     ? isDark
@@ -125,7 +129,7 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
                     href={chain.blockExplorerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
+                    onClick={(e: React.MouseEvent): void => e.stopPropagation()}
                     className={`p-1 rounded-lg transition-colors ${
                       isDark ? 'hover:bg-gray-600' : 'hover:bg-gray-200'
                     }`}
