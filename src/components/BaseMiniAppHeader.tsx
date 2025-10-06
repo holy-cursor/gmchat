@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageCircle, Plus, Settings, RefreshCw, Code, ChevronUp, UserPlus, Moon, Sun } from 'lucide-react';
+import { MessageCircle, Plus, Settings, RefreshCw, Code, ChevronUp, UserPlus, Moon, Sun, Shield } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { WalletType } from './BaseMiniAppWallet';
 
@@ -14,6 +14,7 @@ interface BaseMiniAppHeaderProps {
   onInspectStorage: () => void;
   onManualRecovery: () => void;
   onDebugSendMessage: () => void;
+  onOpenPrivacySettings: () => void;
   selectedWalletType: WalletType;
   onWalletTypeChange: (type: WalletType) => void;
   walletButton: React.ReactNode;
@@ -35,6 +36,7 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
   onInspectStorage,
   onManualRecovery,
   onDebugSendMessage,
+  onOpenPrivacySettings,
   selectedWalletType,
   onWalletTypeChange,
   walletButton,
@@ -410,6 +412,19 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
                        </span>
                      )}
                    </button>
+
+            {/* Privacy Settings Button */}
+            <button
+              onClick={onOpenPrivacySettings}
+              className={`p-2 rounded-xl transition-all duration-200 ${
+                isDark
+                  ? 'bg-gray-800 hover:bg-gray-700 text-blue-300 hover:text-blue-200'
+                  : 'bg-gray-100 hover:bg-gray-200 text-blue-600 hover:text-blue-700'
+              }`}
+              title="Privacy & Security Settings"
+            >
+              <Shield className="w-5 h-5" />
+            </button>
 
             {/* Settings Button */}
             <button

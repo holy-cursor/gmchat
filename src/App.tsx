@@ -18,10 +18,13 @@ import AddContactModal from './components/AddContactModal';
 import ContactTagModal from './components/ContactTagModal';
 import CaptchaModal from './components/CaptchaModal';
 import MiniAppModeIndicator from './components/MiniAppModeIndicator';
+import PrivacySettingsModal from './components/PrivacySettingsModal';
 // import DatabaseTest from './components/DatabaseTest';
 import './utils/ipfsTest'; // Load IPFS test utility
 import { toast } from 'react-hot-toast';
 import './App.css'; // Import modern iMessage-inspired styling
+import PrivacyService from './services/privacyService';
+import AuditLogService from './services/auditLogService';
 
 function AppContent() {
   const { isDark } = useTheme();
@@ -52,6 +55,7 @@ function AppContent() {
   const [isSending, setIsSending] = useState(false);
   const [isCaptchaModalOpen, setIsCaptchaModalOpen] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<{ content: string; recipient: string } | null>(null);
+  const [isPrivacySettingsOpen, setIsPrivacySettingsOpen] = useState(false);
   // const [showDatabaseTest, setShowDatabaseTest] = useState(false);
 
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -424,6 +428,21 @@ function AppContent() {
       toast.error("Cannot send message to yourself directly.");
       return;
     }
+
+    // Privacy checks
+    if (!PrivacyService.isContactAllowed(finalRecipient)) {
+      toast.error("This contact is blocked or not allowed.");
+      return;
+    }
+
+    // Log message sending attempt
+    AuditLogService.logEvent(
+      'message_sent',
+      currentWalletAddress,
+      { recipient: finalRecipient, contentLength: finalContent.length },
+      'low',
+      finalRecipient
+    );
 
     setPendingMessage({ content: finalContent, recipient: finalRecipient });
     setIsCaptchaModalOpen(true);
@@ -820,6 +839,7 @@ function AppContent() {
                onInspectStorage={inspectLocalStorage}
                onManualRecovery={handleManualRecovery}
                onDebugSendMessage={handleDebugSendMessage}
+               onOpenPrivacySettings={() => setIsPrivacySettingsOpen(true)}
                selectedWalletType={selectedWalletType}
                onWalletTypeChange={handleWalletTypeChange}
                walletButton={<BaseMiniAppWallet onWalletTypeChange={handleWalletTypeChange} />}
@@ -915,6 +935,11 @@ function AppContent() {
           isOpen={isCaptchaModalOpen}
           onClose={() => setIsCaptchaModalOpen(false)}
           onVerify={handleCaptchaVerify}
+        />
+        <PrivacySettingsModal
+          isOpen={isPrivacySettingsOpen}
+          onClose={() => setIsPrivacySettingsOpen(false)}
+          currentUserId={evmAddress || ''}
         />
       </div>
     </ErrorBoundary>
