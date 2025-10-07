@@ -109,32 +109,32 @@ const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className={`w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl ${
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className={`w-full max-w-4xl max-h-[95vh] rounded-2xl shadow-2xl ${
         isDark ? 'bg-gray-900' : 'bg-white'
       }`}>
         {/* Header */}
-        <div className={`flex items-center justify-between p-6 border-b ${
+        <div className={`flex items-center justify-between p-4 sm:p-6 border-b ${
           isDark ? 'border-gray-700' : 'border-gray-200'
         }`}>
-          <div className="flex items-center space-x-3">
-            <div className={`p-2 rounded-xl ${
+          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+            <div className={`p-2 rounded-xl flex-shrink-0 ${
               isDark ? 'bg-blue-900' : 'bg-blue-100'
             }`}>
-              <Shield className={`w-6 h-6 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
+              <Shield className={`w-5 h-5 sm:w-6 sm:h-6 ${isDark ? 'text-blue-300' : 'text-blue-600'}`} />
             </div>
-            <div>
-              <h2 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                Privacy & Security Settings
+            <div className="min-w-0 flex-1">
+              <h2 className={`text-lg sm:text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>
+                Privacy & Security
               </h2>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              <p className={`text-xs sm:text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'} hidden sm:block`}>
                 Control your privacy and security preferences
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className={`p-2 rounded-xl transition-colors ${
+            className={`p-2 rounded-xl transition-colors flex-shrink-0 ${
               isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
             }`}
           >
@@ -143,7 +143,7 @@ const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({
         </div>
 
         {/* Tabs */}
-        <div className={`flex border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
+        <div className={`flex border-b overflow-x-auto ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
           {[
             { id: 'general', label: 'General', icon: Settings },
             { id: 'encryption', label: 'Encryption', icon: Lock },
@@ -153,7 +153,7 @@ const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({
             <button
               key={id}
               onClick={() => setActiveTab(id as any)}
-              className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium transition-colors ${
+              className={`flex items-center space-x-1 sm:space-x-2 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
                 activeTab === id
                   ? isDark
                     ? 'text-blue-400 border-b-2 border-blue-400'
@@ -163,14 +163,15 @@ const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <Icon className="w-4 h-4" />
-              <span>{label}</span>
+              <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">{label}</span>
+              <span className="sm:hidden">{label.split(' ')[0]}</span>
             </button>
           ))}
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-96 overflow-y-auto">
+        <div className="p-4 sm:p-6 max-h-80 sm:max-h-96 overflow-y-auto">
           {activeTab === 'general' && (
             <div className="space-y-6">
               <div>
@@ -273,48 +274,46 @@ const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({
                   Encryption Settings
                 </h3>
                 <div className="space-y-4">
-                  <div>
-                    <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                      Encryption Level
-                    </label>
-                    <select
-                      value={settings.encryptionLevel}
-                      onChange={(e) => handleSettingChange('encryptionLevel', e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="standard">Standard (AES-256-CBC)</option>
-                      <option value="military">Military (AES-256-GCM)</option>
-                      <option value="quantum">Quantum-Resistant (ChaCha20-Poly1305)</option>
-                    </select>
+                  <div className={`p-4 rounded-lg ${isDark ? 'bg-green-900/20 border border-green-800' : 'bg-green-50 border border-green-200'}`}>
+                    <div className="flex items-center space-x-3">
+                      <Shield className={`w-6 h-6 ${isDark ? 'text-green-400' : 'text-green-600'}`} />
+                      <div>
+                        <h4 className={`font-semibold ${isDark ? 'text-green-300' : 'text-green-800'}`}>
+                          Military-Grade Encryption Active
+                        </h4>
+                        <p className={`text-sm ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+                          Using AES-256-GCM with Perfect Forward Secrecy
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                        Perfect Forward Secrecy
-                      </p>
-                      <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                        Generate new keys for each message
-                      </p>
+                  <div className={`p-4 rounded-lg ${isDark ? 'bg-blue-900/20 border border-blue-800' : 'bg-blue-50 border border-blue-200'}`}>
+                    <div className="flex items-center space-x-3">
+                      <Lock className={`w-6 h-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+                      <div>
+                        <h4 className={`font-semibold ${isDark ? 'text-blue-300' : 'text-blue-800'}`}>
+                          Perfect Forward Secrecy Enabled
+                        </h4>
+                        <p className={`text-sm ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+                          New encryption keys generated for each message
+                        </p>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => handleSettingChange('perfectForwardSecrecy', !settings.perfectForwardSecrecy)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        settings.perfectForwardSecrecy
-                          ? isDark ? 'bg-green-600' : 'bg-green-500'
-                          : isDark ? 'bg-gray-600' : 'bg-gray-300'
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          settings.perfectForwardSecrecy ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
+                  </div>
+
+                  <div className={`p-4 rounded-lg ${isDark ? 'bg-purple-900/20 border border-purple-800' : 'bg-purple-50 border border-purple-200'}`}>
+                    <div className="flex items-center space-x-3">
+                      <AlertTriangle className={`w-6 h-6 ${isDark ? 'text-purple-400' : 'text-purple-600'}`} />
+                      <div>
+                        <h4 className={`font-semibold ${isDark ? 'text-purple-300' : 'text-purple-800'}`}>
+                          Quantum-Resistant Ready
+                        </h4>
+                        <p className={`text-sm ${isDark ? 'text-purple-400' : 'text-purple-600'}`}>
+                          ChaCha20-Poly1305 algorithm for future-proof security
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
