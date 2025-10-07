@@ -14,7 +14,6 @@ import { MessageStorageService } from './services/messageStorage';
 import HybridDatabaseService from './services/hybridDatabaseService';
 import ContactList from './components/ContactList';
 import BaseMiniAppConversationView from './components/BaseMiniAppConversationView';
-import NewMessageModal from './components/NewMessageModal';
 import AddContactModal from './components/AddContactModal';
 import ContactTagModal from './components/ContactTagModal';
 import CaptchaModal from './components/CaptchaModal';
@@ -50,7 +49,6 @@ function AppContent() {
   // Modal state
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [isNewMessageModalOpen, setIsNewMessageModalOpen] = useState(false);
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
   const [isContactTagModalOpen, setIsContactTagModalOpen] = useState(false);
   const [contactToTag, setContactToTag] = useState<Contact | null>(null);
@@ -764,7 +762,6 @@ function AppContent() {
     }
   };
   const handleCloseSuccessModal = (): void => setIsSuccessModalOpen(false);
-  const handleCloseNewMessageModal = (): void => setIsNewMessageModalOpen(false);
   const handleCloseContactTagModal = (): void => {
     setIsContactTagModalOpen(false);
     setContactToTag(null);
@@ -850,7 +847,7 @@ function AppContent() {
              <BaseMiniAppHeader
                onOpenAbout={handleOpenAboutModal}
                unreadCount={totalUnreadCount}
-               onNewMessage={() => setIsNewMessageModalOpen(true)}
+               onNewMessage={() => {}}
                onAddContact={() => setIsAddContactModalOpen(true)}
                onSyncMessages={handleSyncMessages}
                onCleanupMessages={cleanupDuplicateMessages}
@@ -927,28 +924,7 @@ function AppContent() {
           <div className="relative">
             {/* FAB Menu */}
             {showFABMenu && (
-              <div className="absolute bottom-16 right-0 space-y-3">
-                {/* New Message Button */}
-                <button
-                  onClick={() => {
-                    setIsNewMessageModalOpen(true);
-                    setShowFABMenu(false);
-                  }}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-2xl shadow-lg transition-all duration-200 ${
-                    isDark
-                      ? 'bg-green-700 hover:bg-green-600 text-white'
-                      : 'bg-green-500 hover:bg-green-600 text-white'
-                  }`}
-                >
-                  <Plus className="w-5 h-5" />
-                  <span className="font-medium">New Message</span>
-                  {totalUnreadCount > 0 && (
-                    <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                      {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
-                    </span>
-                  )}
-                </button>
-
+              <div className="absolute bottom-16 right-0 space-y-3 max-h-96 overflow-y-auto">
                 {/* Add Contact Button */}
                 <button
                   onClick={() => {
@@ -964,6 +940,91 @@ function AppContent() {
                   <UserPlus className="w-5 h-5" />
                   <span className="font-medium">Add Contact</span>
                 </button>
+
+                {/* Contacts List */}
+                {contacts.length > 0 && (
+                  <div className={`max-h-64 overflow-y-auto rounded-2xl shadow-lg ${
+                    isDark ? 'bg-gray-800' : 'bg-white'
+                  }`}>
+                    <div className={`px-4 py-3 border-b ${
+                      isDark ? 'border-gray-700' : 'border-gray-200'
+                    }`}>
+                      <h3 className={`text-sm font-semibold ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        Contacts ({contacts.length})
+                      </h3>
+                    </div>
+                    <div className="p-2 space-y-1">
+                      {contacts.map((contact) => (
+                        <button
+                          key={contact.address}
+                          onClick={() => {
+                            handleContactSelect(contact);
+                            setShowFABMenu(false);
+                          }}
+                          className={`w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition-all duration-200 ${
+                            selectedContact?.address === contact.address
+                              ? isDark
+                                ? 'bg-green-900/40 border border-green-600/50'
+                                : 'bg-green-50 border border-green-200'
+                              : isDark
+                              ? 'hover:bg-gray-700'
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          {/* Avatar */}
+                          <div className="flex-shrink-0 relative">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              isDark 
+                                ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                                : 'bg-gradient-to-br from-green-400 to-green-600'
+                            }`}>
+                              <UserPlus className="w-4 h-4 text-white" />
+                            </div>
+                            {contact.unreadCount > 0 && (
+                              <div className="absolute -top-1 -right-1">
+                                <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                                  {contact.unreadCount > 9 ? '9+' : contact.unreadCount}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Contact Info */}
+                          <div className="flex-1 min-w-0 text-left">
+                            <h4 className={`text-sm font-medium truncate ${
+                              isDark ? 'text-white' : 'text-gray-900'
+                            }`}>
+                              {contact.customTag || contact.displayName}
+                            </h4>
+                            <p className={`text-xs truncate ${
+                              isDark ? 'text-gray-400' : 'text-gray-500'
+                            }`}>
+                              {contact.address.slice(0, 6)}...{contact.address.slice(-4)}
+                            </p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No Contacts Message */}
+                {contacts.length === 0 && (
+                  <div className={`px-4 py-6 rounded-2xl shadow-lg text-center ${
+                    isDark ? 'bg-gray-800' : 'bg-white'
+                  }`}>
+                    <UserPlus className={`w-8 h-8 mx-auto mb-2 ${
+                      isDark ? 'text-gray-400' : 'text-gray-500'
+                    }`} />
+                    <p className={`text-sm ${
+                      isDark ? 'text-gray-400' : 'text-gray-500'
+                    }`}>
+                      No contacts yet
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -987,13 +1048,6 @@ function AppContent() {
           onClose={handleCloseSuccessModal}
           message="Message sent successfully!"
           transactionSignature=""
-        />
-        <NewMessageModal
-          isOpen={isNewMessageModalOpen}
-          onClose={handleCloseNewMessageModal}
-          onSendMessage={handleSendMessage}
-          contacts={contacts}
-          currentWalletAddress={evmAddress || ''}
         />
         <AddContactModal
           isOpen={isAddContactModalOpen}
