@@ -3,7 +3,7 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { BaseMiniAppProvider } from './contexts/BaseMiniAppContext';
 import { useAccount } from 'wagmi';
 import { WalletType } from './components/BaseMiniAppWallet';
-import { Plus, UserPlus } from 'lucide-react';
+import { Plus, UserPlus, X } from 'lucide-react';
 import BaseMiniAppHeader from './components/BaseMiniAppHeader';
 import BaseMiniAppWallet from './components/BaseMiniAppWallet';
 import AboutModal from './components/AboutModal';
@@ -1004,126 +1004,149 @@ function AppContent() {
 
         {/* Floating Action Button - Mobile Only */}
         <div className="fixed bottom-6 right-6 z-40 sm:hidden">
-          <div className="relative">
-            {/* FAB Menu */}
-            {showFABMenu && (
-              <div className="absolute bottom-16 right-0 space-y-3 max-h-96 overflow-y-auto">
-                {/* Add Contact Button */}
+          <button
+            onClick={() => setShowFABMenu(!showFABMenu)}
+            className={`w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center ${
+              isDark
+                ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                : 'bg-purple-500 hover:bg-purple-600 text-white'
+            }`}
+          >
+            <Plus className={`w-6 h-6 transition-transform duration-200 ${showFABMenu ? 'rotate-45' : ''}`} />
+          </button>
+        </div>
+
+        {/* Full Screen FAB Menu - Mobile Only */}
+        {showFABMenu && (
+          <div className="fixed inset-0 z-50 sm:hidden">
+            {/* Backdrop */}
+            <div 
+              className="absolute inset-0 bg-black bg-opacity-50"
+              onClick={() => setShowFABMenu(false)}
+            />
+            
+            {/* Menu Content */}
+            <div className={`absolute inset-x-0 bottom-0 rounded-t-3xl shadow-2xl max-h-[85vh] ${
+              isDark ? 'bg-gray-900' : 'bg-white'
+            }`}>
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className={`text-xl font-bold ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}>
+                  Quick Actions
+                </h2>
+                <button
+                  onClick={() => setShowFABMenu(false)}
+                  className={`p-2 rounded-full transition-colors ${
+                    isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {/* Add Contact Button */}
+              <div className="p-6">
                 <button
                   onClick={() => {
                     setIsAddContactModalOpen(true);
                     setShowFABMenu(false);
                   }}
-                  className={`flex items-center space-x-3 px-4 py-3 rounded-2xl shadow-lg transition-all duration-200 ${
+                  className={`w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-2xl shadow-lg transition-all duration-200 ${
                     isDark
                       ? 'bg-blue-700 hover:bg-blue-600 text-white'
                       : 'bg-blue-500 hover:bg-blue-600 text-white'
                   }`}
                 >
-                  <UserPlus className="w-5 h-5" />
-                  <span className="font-medium">Add Contact</span>
+                  <UserPlus className="w-6 h-6" />
+                  <span className="font-semibold text-lg">Add New Contact</span>
                 </button>
+              </div>
 
-                {/* Contacts List */}
-                {contacts.length > 0 && (
-                  <div className={`max-h-64 overflow-y-auto rounded-2xl shadow-lg ${
-                    isDark ? 'bg-gray-800' : 'bg-white'
-                  }`}>
-                    <div className={`px-4 py-3 border-b ${
-                      isDark ? 'border-gray-700' : 'border-gray-200'
+              {/* Contacts Section */}
+              {contacts.length > 0 && (
+                <div className="px-6 pb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className={`text-lg font-semibold ${
+                      isDark ? 'text-white' : 'text-gray-900'
                     }`}>
-                      <h3 className={`text-sm font-semibold ${
-                        isDark ? 'text-white' : 'text-gray-900'
-                      }`}>
-                        Contacts ({contacts.length})
-                      </h3>
-                    </div>
-                    <div className="p-2 space-y-1">
-                      {contacts.map((contact) => (
-                        <button
-                          key={contact.address}
-                          onClick={() => {
-                            handleContactSelect(contact);
-                            setShowFABMenu(false);
-                          }}
-                          className={`w-full flex items-center space-x-3 px-3 py-3 rounded-xl transition-all duration-200 ${
-                            selectedContact?.address === contact.address
-                              ? isDark
-                                ? 'bg-green-900/40 border border-green-600/50'
-                                : 'bg-green-50 border border-green-200'
-                              : isDark
-                              ? 'hover:bg-gray-700'
-                              : 'hover:bg-gray-50'
-                          }`}
-                        >
-                          {/* Avatar */}
-                          <div className="flex-shrink-0 relative">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              isDark 
-                                ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
-                                : 'bg-gradient-to-br from-green-400 to-green-600'
-                            }`}>
-                              <UserPlus className="w-4 h-4 text-white" />
-                            </div>
-                            {contact.unreadCount > 0 && (
-                              <div className="absolute -top-1 -right-1">
-                                <span className="bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                                  {contact.unreadCount > 9 ? '9+' : contact.unreadCount}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Contact Info */}
-                          <div className="flex-1 min-w-0 text-left">
-                            <h4 className={`text-sm font-medium truncate ${
-                              isDark ? 'text-white' : 'text-gray-900'
-                            }`}>
-                              {contact.customTag || contact.displayName}
-                            </h4>
-                            <p className={`text-xs truncate ${
-                              isDark ? 'text-gray-400' : 'text-gray-500'
-                            }`}>
-                              {contact.address.slice(0, 6)}...{contact.address.slice(-4)}
-                            </p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+                      Your Contacts ({contacts.length})
+                    </h3>
                   </div>
-                )}
+                  
+                  {/* Scrollable Contacts List */}
+                  <div className="max-h-80 overflow-y-auto space-y-2">
+                    {contacts.map((contact) => (
+                      <button
+                        key={contact.address}
+                        onClick={() => {
+                          handleContactSelect(contact);
+                          setShowFABMenu(false);
+                        }}
+                        className={`w-full flex items-center space-x-4 px-4 py-4 rounded-2xl transition-all duration-200 ${
+                          selectedContact?.address === contact.address
+                            ? isDark
+                              ? 'bg-green-900/40 border-2 border-green-600/50'
+                              : 'bg-green-50 border-2 border-green-200'
+                            : isDark
+                              ? 'hover:bg-gray-800 text-gray-300 border border-gray-700'
+                              : 'hover:bg-gray-100 text-gray-700 border border-gray-200'
+                        }`}
+                      >
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                          <span className="text-white font-bold text-lg">
+                            {contact.displayName.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className={`font-semibold text-base truncate ${
+                            isDark ? 'text-white' : 'text-gray-900'
+                          }`}>
+                            {contact.customTag || contact.displayName}
+                          </p>
+                          <p className={`text-sm truncate ${
+                            isDark ? 'text-gray-400' : 'text-gray-500'
+                          }`}>
+                            {contact.address.slice(0, 8)}...{contact.address.slice(-6)}
+                          </p>
+                        </div>
+                        {contact.unreadCount > 0 && (
+                          <div className="bg-red-500 text-white text-sm rounded-full h-6 w-6 flex items-center justify-center font-bold flex-shrink-0">
+                            {contact.unreadCount > 99 ? '99+' : contact.unreadCount}
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-                {/* No Contacts Message */}
-                {contacts.length === 0 && (
-                  <div className={`px-4 py-6 rounded-2xl shadow-lg text-center ${
-                    isDark ? 'bg-gray-800' : 'bg-white'
+              {/* Empty State */}
+              {contacts.length === 0 && (
+                <div className="px-6 pb-6 text-center">
+                  <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
+                    isDark ? 'bg-gray-800' : 'bg-gray-100'
                   }`}>
-                    <UserPlus className={`w-8 h-8 mx-auto mb-2 ${
+                    <UserPlus className={`w-8 h-8 ${
                       isDark ? 'text-gray-400' : 'text-gray-500'
                     }`} />
-                    <p className={`text-sm ${
-                      isDark ? 'text-gray-400' : 'text-gray-500'
-                    }`}>
-                      No contacts yet
-                    </p>
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Main FAB Button */}
-            <button
-              onClick={() => setShowFABMenu(!showFABMenu)}
-              className={`w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center ${
-                isDark
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                  : 'bg-blue-500 hover:bg-blue-600 text-white'
-              }`}
-            >
-              <Plus className={`w-6 h-6 transition-transform duration-200 ${showFABMenu ? 'rotate-45' : ''}`} />
-            </button>
+                  <h3 className={`text-lg font-semibold mb-2 ${
+                    isDark ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    No contacts yet
+                  </h3>
+                  <p className={`text-sm ${
+                    isDark ? 'text-gray-400' : 'text-gray-500'
+                  }`}>
+                    Add your first contact to start messaging
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         <AboutModal isOpen={isAboutModalOpen} onClose={handleCloseAboutModal} />
         <SuccessModal
