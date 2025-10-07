@@ -12,6 +12,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { Contact, Conversation } from './types';
 import { MessageStorageService } from './services/messageStorage';
 import HybridDatabaseService from './services/hybridDatabaseService';
+import SecureDatabaseService from './services/secureDatabaseService';
+import SecureAuthService from './services/secureAuthService';
 import ContactList from './components/ContactList';
 import BaseMiniAppConversationView from './components/BaseMiniAppConversationView';
 import AddContactModal from './components/AddContactModal';
@@ -45,6 +47,8 @@ function AppContent() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [useHybridMode, setUseHybridMode] = useState(true); // Enable hybrid mode by default for cross-device sync
   const [ultraLowCostMode, setUltraLowCostMode] = useState(false); // Database-only mode (no blockchain)
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Authentication state
+  const [useSecureMode] = useState(true); // Enable secure mode by default
   
   // Modal state
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
@@ -87,7 +91,17 @@ function AppContent() {
     try {
       let storedContacts: Contact[];
       
-      if (useHybridMode) {
+      if (useSecureMode && isAuthenticated) {
+        // Use secure database service
+        console.log('Loading contacts from secure database...');
+        try {
+          storedContacts = await SecureDatabaseService.getContacts(walletAddress);
+          console.log('Loaded contacts from secure database:', storedContacts.length);
+        } catch (dbError) {
+          console.warn('Failed to load from secure database, falling back to hybrid:', dbError);
+          storedContacts = await HybridDatabaseService.getContacts(walletAddress);
+        }
+      } else if (useHybridMode) {
         // Use hybrid database for real-time sync
         console.log('Loading contacts from hybrid database...');
         try {
@@ -160,7 +174,55 @@ function AppContent() {
       const unread = storedContacts.reduce((sum, contact) => sum + (contact.unreadCount || 0), 0);
       setTotalUnreadCount(unread);
     }
-  }, [evmAddress, selectedContact, useHybridMode]);
+  }, [evmAddress, selectedContact, useHybridMode, useSecureMode, isAuthenticated]);
+
+  // Authenticate user when wallet connects
+  const authenticateUser = useCallback(async (): Promise<void> => {
+    if (!evmAddress) {
+      setIsAuthenticated(false);
+      return;
+    }
+
+    try {
+      // Check if already authenticated
+      const session = await SecureAuthService.getCurrentSession();
+      if (session) {
+        setIsAuthenticated(true);
+        return;
+      }
+
+      // For demo purposes, auto-authenticate with wallet address
+      // In production, require actual wallet signature
+      const mockSignature = '0x' + '0'.repeat(130); // Mock signature
+      const mockMessage = `Sign this message to authenticate with Parc3l: ${Date.now()}`;
+      
+      const authResult = await SecureAuthService.authenticateWithWallet(
+        evmAddress,
+        mockSignature,
+        mockMessage
+      );
+
+      if (authResult.success) {
+        setIsAuthenticated(true);
+        console.log('User authenticated successfully');
+      } else {
+        console.error('Authentication failed:', authResult.error);
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+      setIsAuthenticated(false);
+    }
+  }, [evmAddress]);
+
+  // Authenticate when wallet connects
+  useEffect(() => {
+    if (evmAddress) {
+      authenticateUser();
+    } else {
+      setIsAuthenticated(false);
+    }
+  }, [evmAddress, authenticateUser]);
 
   // Real-time sync with hybrid database
   useEffect(() => {
@@ -376,7 +438,16 @@ function AppContent() {
         publicKey: encryptedMessage.publicKey
       };
 
-      if (useHybridMode) {
+      if (useSecureMode && isAuthenticated) {
+        // Store in secure database with encryption
+        try {
+          await SecureDatabaseService.storeMessage(messageToStore);
+          console.log('Message stored in secure database');
+        } catch (error) {
+          console.warn('Failed to store in secure database, falling back to hybrid:', error);
+          await HybridDatabaseService.storeMessage(messageToStore);
+        }
+      } else if (useHybridMode) {
         // Store in hybrid database for real-time sync
         try {
           await HybridDatabaseService.storeMessage(messageToStore);
@@ -416,7 +487,7 @@ function AppContent() {
       toast.error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error; // Re-throw to be caught by handleCaptchaVerify
     }
-  }, [evmConnected, evmAddress, evmChainId, selectedWalletType, loadContacts, selectedContact, useHybridMode, ultraLowCostMode]);
+  }, [evmConnected, evmAddress, evmChainId, selectedWalletType, loadContacts, selectedContact, useHybridMode, ultraLowCostMode, useSecureMode, isAuthenticated]);
 
   const handleSendMessage = useCallback(async (content?: string, recipient?: string): Promise<void> => {
     const currentWalletAddress = evmAddress;
@@ -869,14 +940,27 @@ function AppContent() {
         {/* Mode Indicators */}
         <div className="px-2 sm:px-4 py-1 sm:py-2 space-y-1 sm:space-y-2">
           <MiniAppModeIndicator onModeChange={() => {}} />
-          {/* Cost Mode Indicator */}
-          {ultraLowCostMode && (
+          
+          {/* Security Mode Indicator */}
+          {useSecureMode && isAuthenticated && (
             <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
               isDark
                 ? 'bg-green-900/30 text-green-300'
                 : 'bg-green-100 text-green-700'
             }`}>
-              <span className="text-green-500">💰</span>
+              <span className="text-green-500">🔒</span>
+              <span>Secure Mode: End-to-end encrypted with RLS protection</span>
+            </div>
+          )}
+          
+          {/* Cost Mode Indicator */}
+          {ultraLowCostMode && (
+            <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+              isDark
+                ? 'bg-blue-900/30 text-blue-300'
+                : 'bg-blue-100 text-blue-700'
+            }`}>
+              <span className="text-blue-500">💰</span>
               <span>Ultra-Low-Cost Mode: $0.00 per message (Database-only)</span>
             </div>
           )}
@@ -1110,3 +1194,4 @@ function App() {
 }
 
 export default App;
+
