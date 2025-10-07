@@ -73,19 +73,19 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
         ? 'bg-gray-900 border-gray-700' 
         : 'bg-white border-gray-200'
     }`}>
-      {/* Mobile-optimized header */}
-      <div className="px-3 py-3">
-        <div className="flex items-center justify-between">
-          {/* App Title & Logo */}
-          <div className="flex items-center space-x-2 min-w-0 flex-1">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="w-5 h-5 text-white" />
+      {/* Mobile-first responsive header */}
+      <div className="px-4 py-3 sm:px-6">
+        <div className="flex items-center justify-between gap-3">
+          {/* App Title & Logo - Flexible width */}
+          <div className="flex items-center space-x-3 min-w-0 flex-1">
+            <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <MessageCircle className="w-5 h-5 sm:w-4 sm:h-4 text-white" />
             </div>
-            <div className="min-w-0">
-              <h1 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>
+            <div className="min-w-0 flex-1">
+              <h1 className={`text-xl sm:text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>
                 Parc3l
               </h1>
-              <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              <p className={`text-sm sm:text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} truncate`}>
                 Base Mini App
               </p>
             </div>
@@ -127,38 +127,38 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
             </button>
           </div>
 
-          {/* Three Dots Menu - Always visible */}
-          <div className="relative" ref={menuRef}>
+          {/* Three Dots Menu - Always visible, properly spaced */}
+          <div className="relative flex-shrink-0" ref={menuRef}>
             <button
               onClick={() => setShowMainMenu(!showMainMenu)}
-              className={`p-2 rounded-xl transition-all duration-200 ${
+              className={`p-2 sm:p-1.5 rounded-xl transition-all duration-200 ${
                 isDark
                   ? 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white'
                   : 'bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-900'
               }`}
               title="More Options"
             >
-              <MoreVertical className="w-5 h-5" />
+              <MoreVertical className="w-6 h-6 sm:w-5 sm:h-5" />
             </button>
 
             {/* Main Menu Dropdown */}
             {showMainMenu && (
-              <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl border shadow-lg z-50 ${
+              <div className={`absolute right-0 top-full mt-2 w-64 sm:w-56 rounded-xl border shadow-lg z-50 ${
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
-                <div className="p-2 space-y-1">
+                <div className="p-3 space-y-1">
                   {/* Dark Mode Toggle */}
                   <button
                     onClick={() => {
                       toggleTheme();
                       setShowMainMenu(false);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                    className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center space-x-3 ${
                       isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
                     }`}
                   >
-                    {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                    <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+                    {isDark ? <Sun className="w-5 h-5 flex-shrink-0" /> : <Moon className="w-5 h-5 flex-shrink-0" />}
+                    <span className="truncate">{isDark ? 'Light Mode' : 'Dark Mode'}</span>
                   </button>
 
                   {/* Sync Messages */}
@@ -167,12 +167,12 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
                       onSyncMessages();
                       setShowMainMenu(false);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                    className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center space-x-3 ${
                       isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
                     }`}
                   >
-                    <RefreshCw className="w-4 h-4" />
-                    <span>Sync Messages</span>
+                    <RefreshCw className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">Sync Messages</span>
                   </button>
 
                   {/* Privacy Settings */}
@@ -181,12 +181,12 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
                       onOpenPrivacySettings();
                       setShowMainMenu(false);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                    className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center space-x-3 ${
                       isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
                     }`}
                   >
-                    <Shield className="w-4 h-4" />
-                    <span>Privacy Settings</span>
+                    <Shield className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">Privacy Settings</span>
                   </button>
 
                   {/* Developer Mode Toggle */}
@@ -200,12 +200,12 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
                         setShowDevMenu(!showDevMenu);
                       }
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                    className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center space-x-3 ${
                       isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
                     }`}
                   >
-                    <Code className="w-4 h-4" />
-                    <span>{isDevMode ? 'Developer Menu' : 'Developer Mode'}</span>
+                    <Code className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">{isDevMode ? 'Developer Menu' : 'Developer Mode'}</span>
                   </button>
 
                   {/* About/Settings */}
@@ -214,12 +214,12 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
                       onOpenAbout();
                       setShowMainMenu(false);
                     }}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                    className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center space-x-3 ${
                       isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
                     }`}
                   >
-                    <Settings className="w-4 h-4" />
-                    <span>About & Settings</span>
+                    <Settings className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">About & Settings</span>
                   </button>
                   </div>
                 </div>
@@ -378,8 +378,11 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
               )}
           </div>
 
-          {/* Wallet Connection - Mobile Optimized */}
-          <div className="mt-3">
+        </div>
+
+        {/* Wallet Connection - Mobile Optimized, Full Width */}
+        <div className="mt-4 px-1">
+          <div className="w-full">
             {walletButton}
           </div>
         </div>

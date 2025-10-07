@@ -910,12 +910,12 @@ function AppContent() {
 
   return (
     <ErrorBoundary>
-      <div className={`h-screen flex flex-col overflow-hidden ${
+      <div className={`min-h-screen flex flex-col ${
         isDark 
           ? 'bg-gray-900' 
           : 'bg-gray-50'
       }`}>
-             <BaseMiniAppHeader
+        <BaseMiniAppHeader
                onOpenAbout={handleOpenAboutModal}
                unreadCount={totalUnreadCount}
                onNewMessage={() => {}}
@@ -938,7 +938,7 @@ function AppContent() {
              />
         
         {/* Mode Indicators */}
-        <div className="px-2 sm:px-4 py-1 sm:py-2 space-y-1 sm:space-y-2">
+        <div className="px-4 py-2 space-y-2">
           <MiniAppModeIndicator onModeChange={() => {}} />
           
           {/* Security Mode Indicator */}
@@ -949,7 +949,7 @@ function AppContent() {
                 : 'bg-green-100 text-green-700'
             }`}>
               <span className="text-green-500">🔒</span>
-              <span>Secure Mode: End-to-end encrypted with RLS protection</span>
+              <span className="truncate">Secure Mode: End-to-end encrypted with RLS protection</span>
             </div>
           )}
           
@@ -961,14 +961,14 @@ function AppContent() {
                 : 'bg-blue-100 text-blue-700'
             }`}>
               <span className="text-blue-500">💰</span>
-              <span>Ultra-Low-Cost Mode: $0.00 per message (Database-only)</span>
+              <span className="truncate">Ultra-Low-Cost Mode: $0.00 per message (Database-only)</span>
             </div>
           )}
         </div>
         
-        <main className="flex flex-1 overflow-hidden">
+        <main className="flex flex-1 overflow-hidden min-h-0">
           {/* Contact List - Hidden on mobile when conversation is selected */}
-          <div className={`${selectedContact ? 'hidden lg:block' : 'block'} w-full lg:w-80`}>
+          <div className={`${selectedContact ? 'hidden lg:block' : 'block'} w-full lg:w-80 flex-shrink-0`}>
             <ContactList
               contacts={contacts}
               onSelectContact={handleContactSelect}
@@ -987,19 +987,18 @@ function AppContent() {
           </div>
           
           {/* Conversation View */}
-          <div className={`${selectedContact ? 'block' : 'hidden lg:block'} flex-1 flex flex-col min-w-0`}>
-                <BaseMiniAppConversationView
-                  conversation={currentConversation}
-                  onBack={() => {
-                    console.log('Back button clicked, setting selectedContact to null');
-                    setSelectedContact(null);
-                    setCurrentConversation(null);
-                  }}
-                  onSendMessage={handleSendToConversation}
-                  isSending={isSending}
-                  currentWalletAddress={evmAddress || ''}
-                />
-              
+          <div className={`${selectedContact ? 'block' : 'hidden lg:block'} flex-1 flex flex-col min-w-0 overflow-hidden`}>
+            <BaseMiniAppConversationView
+              conversation={currentConversation}
+              onBack={() => {
+                console.log('Back button clicked, setting selectedContact to null');
+                setSelectedContact(null);
+                setCurrentConversation(null);
+              }}
+              onSendMessage={handleSendToConversation}
+              isSending={isSending}
+              currentWalletAddress={evmAddress || ''}
+            />
           </div>
         </main>
 
