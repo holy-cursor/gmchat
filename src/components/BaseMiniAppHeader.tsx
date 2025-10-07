@@ -93,8 +93,8 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
+          {/* Action Buttons - Hidden on mobile, shown in FAB */}
+          <div className="hidden sm:flex items-center space-x-2 flex-shrink-0">
             {/* New Message Button */}
             <button
               onClick={onNewMessage}

@@ -3,6 +3,7 @@ import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { BaseMiniAppProvider } from './contexts/BaseMiniAppContext';
 import { useAccount } from 'wagmi';
 import { WalletType } from './components/BaseMiniAppWallet';
+import { Plus, UserPlus } from 'lucide-react';
 import BaseMiniAppHeader from './components/BaseMiniAppHeader';
 import BaseMiniAppWallet from './components/BaseMiniAppWallet';
 import AboutModal from './components/AboutModal';
@@ -25,6 +26,7 @@ import { toast } from 'react-hot-toast';
 import './App.css'; // Import modern iMessage-inspired styling
 import PrivacyService from './services/privacyService';
 import AuditLogService from './services/auditLogService';
+import ScreenshotProtectionService from './services/screenshotProtectionService';
 
 function AppContent() {
   const { isDark } = useTheme();
@@ -56,6 +58,17 @@ function AppContent() {
   const [isCaptchaModalOpen, setIsCaptchaModalOpen] = useState(false);
   const [pendingMessage, setPendingMessage] = useState<{ content: string; recipient: string } | null>(null);
   const [isPrivacySettingsOpen, setIsPrivacySettingsOpen] = useState(false);
+  const [showFABMenu, setShowFABMenu] = useState(false);
+
+  // Initialize screenshot protection based on privacy settings
+  useEffect(() => {
+    const settings = PrivacyService.getPrivacySettings();
+    if (!settings.allowScreenshots) {
+      ScreenshotProtectionService.enable();
+    } else {
+      ScreenshotProtectionService.disable();
+    }
+  }, []);
   // const [showDatabaseTest, setShowDatabaseTest] = useState(false);
 
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -429,11 +442,17 @@ function AppContent() {
       return;
     }
 
-    // Privacy checks
-    if (!PrivacyService.isContactAllowed(finalRecipient)) {
-      toast.error("This contact is blocked or not allowed.");
-      return;
-    }
+  // Privacy checks
+  if (!PrivacyService.isContactAllowed(finalRecipient)) {
+    toast.error("This contact is blocked or not allowed.");
+    return;
+  }
+
+  // Screenshot protection check
+  if (!PrivacyService.isScreenshotAllowed(finalRecipient)) {
+    toast.error("Screenshots are not allowed for this contact.");
+    return;
+  }
 
     // Log message sending attempt
     AuditLogService.logEvent(
@@ -902,6 +921,65 @@ function AppContent() {
               
           </div>
         </main>
+
+        {/* Floating Action Button - Mobile Only */}
+        <div className="fixed bottom-6 right-6 z-40 sm:hidden">
+          <div className="relative">
+            {/* FAB Menu */}
+            {showFABMenu && (
+              <div className="absolute bottom-16 right-0 space-y-3">
+                {/* New Message Button */}
+                <button
+                  onClick={() => {
+                    setIsNewMessageModalOpen(true);
+                    setShowFABMenu(false);
+                  }}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-2xl shadow-lg transition-all duration-200 ${
+                    isDark
+                      ? 'bg-green-700 hover:bg-green-600 text-white'
+                      : 'bg-green-500 hover:bg-green-600 text-white'
+                  }`}
+                >
+                  <Plus className="w-5 h-5" />
+                  <span className="font-medium">New Message</span>
+                  {totalUnreadCount > 0 && (
+                    <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                      {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Add Contact Button */}
+                <button
+                  onClick={() => {
+                    setIsAddContactModalOpen(true);
+                    setShowFABMenu(false);
+                  }}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-2xl shadow-lg transition-all duration-200 ${
+                    isDark
+                      ? 'bg-blue-700 hover:bg-blue-600 text-white'
+                      : 'bg-blue-500 hover:bg-blue-600 text-white'
+                  }`}
+                >
+                  <UserPlus className="w-5 h-5" />
+                  <span className="font-medium">Add Contact</span>
+                </button>
+              </div>
+            )}
+
+            {/* Main FAB Button */}
+            <button
+              onClick={() => setShowFABMenu(!showFABMenu)}
+              className={`w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center ${
+                isDark
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
+            >
+              <Plus className={`w-6 h-6 transition-transform duration-200 ${showFABMenu ? 'rotate-45' : ''}`} />
+            </button>
+          </div>
+        </div>
 
         <AboutModal isOpen={isAboutModalOpen} onClose={handleCloseAboutModal} />
         <SuccessModal

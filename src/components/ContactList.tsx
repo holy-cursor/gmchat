@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Contact } from '../types';
-import { MessageCircle, User, Tag, Plus } from 'lucide-react';
+import { MessageCircle, User, Tag, Plus, Search, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 
 interface ContactListProps {
@@ -23,6 +23,20 @@ const ContactList: React.FC<ContactListProps> = ({
   totalUnreadCount,
 }) => {
   const { isDark } = useTheme();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Filter contacts based on search query
+  const filteredContacts = useMemo(() => {
+    if (!searchQuery.trim()) return contacts;
+    
+    const query = searchQuery.toLowerCase().trim();
+    return contacts.filter(contact => 
+      contact.displayName.toLowerCase().includes(query) ||
+      contact.customTag?.toLowerCase().includes(query) ||
+      contact.address.toLowerCase().includes(query)
+    );
+  }, [contacts, searchQuery]);
   const formatTime = (timestamp: number) => {
     const now = Date.now();
     const diff = now - timestamp;
@@ -87,6 +101,49 @@ const ContactList: React.FC<ContactListProps> = ({
             </span>
           )}
         </div>
+
+        {/* Search Bar */}
+        <div className="mt-3 sm:mt-4">
+          <div className={`relative ${
+            isSearchFocused ? 'ring-2 ring-blue-500' : ''
+          }`}>
+            <div className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              <Search className="h-4 w-4" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search contacts or wallet addresses..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              className={`w-full pl-10 pr-10 py-2.5 sm:py-3 text-sm border rounded-xl focus:outline-none transition-all duration-200 ${
+                isDark
+                  ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                  : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+              }`}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
+                  isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <div className={`mt-2 text-xs ${
+              isDark ? 'text-gray-400' : 'text-gray-500'
+            }`}>
+              {filteredContacts.length} contact{filteredContacts.length !== 1 ? 's' : ''} found
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Contacts List */}
@@ -129,7 +186,22 @@ const ContactList: React.FC<ContactListProps> = ({
           </div>
         ) : (
           <div className="p-1 sm:p-2">
-            {contacts.map((contact) => (
+            {filteredContacts.length === 0 ? (
+              <div className={`p-8 text-center ${
+                isDark ? 'text-gray-400' : 'text-gray-500'
+              }`}>
+                <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <h3 className={`text-lg font-semibold mb-2 ${
+                  isDark ? 'text-white' : 'text-gray-900'
+                }`}>
+                  No contacts found
+                </h3>
+                <p className="text-sm">
+                  Try searching with a different term or wallet address
+                </p>
+              </div>
+            ) : (
+              filteredContacts.map((contact) => (
               <div
                 key={contact.address}
                 onClick={(): void => onSelectContact(contact)}
@@ -210,7 +282,8 @@ const ContactList: React.FC<ContactListProps> = ({
                   </div>
                 </div>
               </div>
-            ))}
+              ))
+            )}
           </div>
         )}
 
