@@ -912,8 +912,8 @@ function AppContent() {
     <ErrorBoundary>
       <div className={`min-h-screen flex flex-col ${
         isDark 
-          ? 'bg-gray-900' 
-          : 'bg-gray-50'
+          ? 'bg-gray-800' 
+          : 'bg-white'
       }`}>
         <BaseMiniAppHeader
                onOpenAbout={handleOpenAboutModal}
@@ -1002,19 +1002,21 @@ function AppContent() {
           </div>
         </main>
 
-        {/* Floating Action Button - Mobile Only */}
-        <div className="fixed bottom-6 right-6 z-40 sm:hidden">
-          <button
-            onClick={() => setShowFABMenu(!showFABMenu)}
-            className={`w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center ${
-              isDark
-                ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                : 'bg-purple-500 hover:bg-purple-600 text-white'
-            }`}
-          >
-            <Plus className={`w-6 h-6 transition-transform duration-200 ${showFABMenu ? 'rotate-45' : ''}`} />
-          </button>
-        </div>
+        {/* Floating Action Button - Mobile Only - Hidden in chat */}
+        {!selectedContact && (
+          <div className="fixed bottom-6 right-6 z-40 sm:hidden">
+            <button
+              onClick={() => setShowFABMenu(!showFABMenu)}
+              className={`w-14 h-14 rounded-full shadow-lg transition-all duration-200 flex items-center justify-center ${
+                isDark
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
+            >
+              <Plus className={`w-6 h-6 transition-transform duration-200 ${showFABMenu ? 'rotate-45' : ''}`} />
+            </button>
+          </div>
+        )}
 
         {/* Full Screen FAB Menu - Mobile Only */}
         {showFABMenu && (
@@ -1027,10 +1029,12 @@ function AppContent() {
             
             {/* Menu Content */}
             <div className={`absolute inset-x-0 bottom-0 rounded-t-3xl shadow-2xl max-h-[85vh] ${
-              isDark ? 'bg-gray-900' : 'bg-white'
+              isDark ? 'bg-gray-800' : 'bg-white'
             }`}>
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className={`flex items-center justify-between p-6 border-b ${
+                isDark ? 'border-gray-700' : 'border-gray-200'
+              }`}>
                 <h2 className={`text-xl font-bold ${
                   isDark ? 'text-white' : 'text-gray-900'
                 }`}>
@@ -1039,7 +1043,7 @@ function AppContent() {
                 <button
                   onClick={() => setShowFABMenu(false)}
                   className={`p-2 rounded-full transition-colors ${
-                    isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
+                    isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
                   }`}
                 >
                   <X className="w-6 h-6" />
@@ -1087,14 +1091,14 @@ function AppContent() {
                         className={`w-full flex items-center space-x-4 px-4 py-4 rounded-2xl transition-all duration-200 ${
                           selectedContact?.address === contact.address
                             ? isDark
-                              ? 'bg-green-900/40 border-2 border-green-600/50'
-                              : 'bg-green-50 border-2 border-green-200'
+                              ? 'bg-blue-900/40 border-2 border-blue-600/50'
+                              : 'bg-blue-50 border-2 border-blue-200'
                             : isDark
-                              ? 'hover:bg-gray-800 text-gray-300 border border-gray-700'
+                              ? 'hover:bg-gray-700 text-gray-300 border border-gray-600'
                               : 'hover:bg-gray-100 text-gray-700 border border-gray-200'
                         }`}
                       >
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
                           <span className="text-white font-bold text-lg">
                             {contact.displayName.charAt(0).toUpperCase()}
                           </span>
@@ -1126,10 +1130,10 @@ function AppContent() {
               {contacts.length === 0 && (
                 <div className="px-6 pb-6 text-center">
                   <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center ${
-                    isDark ? 'bg-gray-800' : 'bg-gray-100'
+                    isDark ? 'bg-gray-700' : 'bg-gray-100'
                   }`}>
                     <UserPlus className={`w-8 h-8 ${
-                      isDark ? 'text-gray-400' : 'text-gray-500'
+                      isDark ? 'text-gray-300' : 'text-gray-500'
                     }`} />
                   </div>
                   <h3 className={`text-lg font-semibold mb-2 ${
@@ -1138,7 +1142,7 @@ function AppContent() {
                     No contacts yet
                   </h3>
                   <p className={`text-sm ${
-                    isDark ? 'text-gray-400' : 'text-gray-500'
+                    isDark ? 'text-gray-300' : 'text-gray-500'
                   }`}>
                     Add your first contact to start messaging
                   </p>

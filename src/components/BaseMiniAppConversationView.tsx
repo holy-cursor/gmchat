@@ -104,14 +104,14 @@ const BaseMiniAppConversationView: React.FC<BaseMiniAppConversationViewProps> = 
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Mobile-optimized header */}
-      <div className={`flex items-center justify-between p-3 sm:p-4 border-b ${
-        isDark ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
+      <div className={`sticky top-0 z-10 flex items-center justify-between p-3 sm:p-4 border-b ${
+        isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
       }`}>
         <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
           <button
             onClick={onBack}
             className={`p-2 rounded-xl transition-colors flex-shrink-0 ${
-              isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+              isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
             }`}
           >
             <ArrowLeft className="w-5 h-5" />

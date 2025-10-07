@@ -70,7 +70,7 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
   return (
     <header className={`sticky top-0 z-50 border-b transition-colors duration-200 ${
       isDark 
-        ? 'bg-gray-900 border-gray-700' 
+        ? 'bg-gray-800 border-gray-700' 
         : 'bg-white border-gray-200'
     }`}>
       {/* Mobile-first responsive header */}
@@ -78,7 +78,7 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
         <div className="flex items-center justify-between gap-3">
           {/* App Title & Logo - Flexible width */}
           <div className="flex items-center space-x-3 min-w-0 flex-1">
-            <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
               <MessageCircle className="w-5 h-5 sm:w-4 sm:h-4 text-white" />
             </div>
             <div className="min-w-0 flex-1">
