@@ -291,7 +291,7 @@ function AppContent() {
       console.error('Failed to initialize P2P service:', error);
       toast.error('P2P service initialization failed, falling back to on-chain messaging');
     }
-  }, [evmAddress]); // Only depend on evmAddress
+  }, [evmAddress, loadContacts, selectedContact]); // Include missing dependencies
 
   // Cleanup P2P service
   const cleanupP2PService = useCallback(() => {
@@ -301,7 +301,7 @@ function AppContent() {
       setP2PConnected(false);
       console.log('P2P service cleaned up');
     }
-  }, []); // No dependencies to prevent re-creation
+  }, [p2pService]); // Include p2pService dependency
 
   // Initialize P2P service when wallet connects
   useEffect(() => {
@@ -319,7 +319,7 @@ function AppContent() {
       console.log('🧹 Cleaning up P2P service...');
       cleanupP2PService();
     }
-  }, [evmAddress, useP2PMode]); // Removed function dependencies
+  }, [evmAddress, useP2PMode, p2pService, initializeP2PService, cleanupP2PService]); // Include all dependencies
 
   // Real-time sync with hybrid database
   useEffect(() => {
