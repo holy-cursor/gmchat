@@ -117,10 +117,12 @@ export class SimpleP2PService {
           resolve();
         };
 
-        this.ws.onmessage = (event) => {
-          console.log('📨 Simple P2P: Received message from relay');
-          this.handleIncomingMessage(event.data);
-        };
+            this.ws.onmessage = (event) => {
+              console.log('📨 Simple P2P: Received message from relay');
+              this.handleIncomingMessage(event.data).catch(error => {
+                console.error('❌ Simple P2P: Error handling incoming message:', error);
+              });
+            };
 
         this.ws.onclose = (event) => {
           console.log('🔌 Simple P2P: Connection closed:', event.code, event.reason);
@@ -167,7 +169,7 @@ export class SimpleP2PService {
     }
   }
 
-  private handleIncomingMessage(data: string): void {
+  private async handleIncomingMessage(data: string): Promise<void> {
     try {
       const message = JSON.parse(data);
       
@@ -179,6 +181,23 @@ export class SimpleP2PService {
       if (message.type === 'message' || message.fromPeer) {
         console.log('📨 Simple P2P: Received message from:', message.fromPeer);
         
+        // Decrypt message content if encrypted
+        let decryptedContent = message.content || '';
+        if (message.encryptionKey && message.nonce && message.content) {
+          try {
+            const P2PEncryptionService = await import('./p2pEncryptionService');
+            decryptedContent = await P2PEncryptionService.default.decryptMessage(
+              message.content,
+              message.encryptionKey,
+              message.nonce
+            );
+            console.log('✅ Simple P2P: Message decrypted successfully');
+          } catch (decryptError) {
+            console.warn('⚠️ Simple P2P: Message decryption failed, using encrypted content:', decryptError);
+            // Continue with encrypted content
+          }
+        }
+
         // Convert to P2PMessage format
         const p2pMessage: P2PMessage = {
           id: message.id || `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -186,7 +205,7 @@ export class SimpleP2PService {
           sequence: message.sequence || 0,
           sender: message.sender || message.fromPeer,
           recipient: message.recipient || this.config.nodeId,
-          content: message.content || '',
+          content: decryptedContent,
           contentType: message.contentType || 'text',
           encryptionKey: message.encryptionKey || '',
           nonce: message.nonce || '',
@@ -197,6 +216,28 @@ export class SimpleP2PService {
           storageLocation: 'hot' as const,
           signature: message.signature || ''
         };
+
+        // Verify message signature for integrity
+        if (message.signature && message.sender) {
+          try {
+            const P2PEncryptionService = await import('./p2pEncryptionService');
+            const isValid = await P2PEncryptionService.default.verifySignature(
+              p2pMessage, 
+              message.signature, 
+              message.sender // Using sender as public key for verification
+            );
+            
+            if (!isValid) {
+              console.warn('⚠️ Simple P2P: Message signature verification failed:', message.id);
+              return; // Reject message with invalid signature
+            }
+            
+            console.log('✅ Simple P2P: Message signature verified:', message.id);
+          } catch (verifyError) {
+            console.warn('⚠️ Simple P2P: Signature verification error:', verifyError);
+            // Continue processing but log the warning
+          }
+        }
 
         // Call registered handlers
         const threadHandler = this.messageHandlers.get(p2pMessage.threadId);
@@ -251,6 +292,26 @@ export class SimpleP2PService {
       });
       console.log('✅ Simple P2P: Message created successfully:', message.id);
 
+      // Encrypt message content before sending
+      let encryptedContent = message.content;
+      let encryptionKey = message.encryptionKey;
+      let nonce = message.nonce;
+      
+      try {
+        const P2PEncryptionService = await import('./p2pEncryptionService');
+        const encryptionResult = await P2PEncryptionService.default.encryptMessage(
+          message.content,
+          message.encryptionKey || 'default-key' // Use a default key if none provided
+        );
+        encryptedContent = encryptionResult.encryptedContent;
+        encryptionKey = encryptionResult.publicKey;
+        nonce = encryptionResult.nonce;
+        console.log('✅ Simple P2P: Message encrypted before sending');
+      } catch (encryptError) {
+        console.warn('⚠️ Simple P2P: Message encryption failed, sending unencrypted:', encryptError);
+        // Continue with unencrypted message
+      }
+
       // Send via WebSocket
       const wsMessage = {
         type: 'message',
@@ -258,8 +319,10 @@ export class SimpleP2PService {
         threadId: message.threadId,
         sender: message.sender,
         recipient: message.recipient,
-        content: message.content,
+        content: encryptedContent,
         contentType: message.contentType,
+        encryptionKey: encryptionKey,
+        nonce: nonce,
         timestamp: message.timestamp
       };
 
