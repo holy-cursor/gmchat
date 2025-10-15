@@ -13,9 +13,9 @@ interface SecurityConfig {
 }
 
 class SecurityService {
-  private static readonly RATE_LIMIT_KEY = 'parc3l_rate_limits';
-  private static readonly SECURITY_CONFIG_KEY = 'parc3l_security_config';
-  private static readonly SUSPICIOUS_ACTIVITY_KEY = 'parc3l_suspicious_activity';
+  private static readonly RATE_LIMIT_KEY = 'gmchat_rate_limits';
+  private static readonly SECURITY_CONFIG_KEY = 'gmchat_security_config';
+  private static readonly SUSPICIOUS_ACTIVITY_KEY = 'gmchat_suspicious_activity';
 
   private static defaultConfig: SecurityConfig = {
     maxMessagesPerMinute: 10,
@@ -260,7 +260,7 @@ class SecurityService {
   static clearAllSecurityData(): void {
     localStorage.removeItem(this.RATE_LIMIT_KEY);
     localStorage.removeItem(this.SUSPICIOUS_ACTIVITY_KEY);
-    localStorage.removeItem('parc3l_flagged_addresses');
+    localStorage.removeItem('gmchat_flagged_addresses');
   }
 
   // Private helper methods
@@ -310,7 +310,7 @@ class SecurityService {
 
   private static getFlaggedAddresses(): Record<string, { timestamp: number; reason: string }> {
     try {
-      const stored = localStorage.getItem('parc3l_flagged_addresses');
+      const stored = localStorage.getItem('gmchat_flagged_addresses');
       return stored ? JSON.parse(stored) : {};
     } catch (error) {
       console.error('Failed to load flagged addresses:', error);
@@ -320,7 +320,7 @@ class SecurityService {
 
   private static saveFlaggedAddresses(flagged: Record<string, { timestamp: number; reason: string }>): void {
     try {
-      localStorage.setItem('parc3l_flagged_addresses', JSON.stringify(flagged));
+      localStorage.setItem('gmchat_flagged_addresses', JSON.stringify(flagged));
     } catch (error) {
       console.error('Failed to save flagged addresses:', error);
     }

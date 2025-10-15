@@ -16,7 +16,7 @@ export interface AuthResult {
 }
 
 class SecureAuthService {
-  private static readonly SESSION_KEY = 'parc3l_secure_session';
+  private static readonly SESSION_KEY = 'gmchat_secure_session';
   private static readonly SESSION_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
 
   /**

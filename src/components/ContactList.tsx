@@ -162,7 +162,7 @@ const ContactList: React.FC<ContactListProps> = ({
             <h3 className={`text-xl font-bold mb-3 ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}>
-              Welcome to Parc3l! 🚀
+              Welcome to GMChat! 🚀
             </h3>
             <p className={`text-base mb-6 ${
               isDark ? 'text-gray-300' : 'text-gray-600'

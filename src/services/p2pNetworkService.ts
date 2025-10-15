@@ -186,9 +186,9 @@ export class P2PNetworkService {
     // For Nostr relays, we need to send a proper Nostr message format
     const nostrMessage = [
       "REQ",
-      "parc3l_discovery",
+      "gmchat_discovery",
       {
-        "kinds": [30000], // Custom kind for Parc3l discovery
+        "kinds": [30000], // Custom kind for GMChat discovery
         "authors": [this.nodeId],
         "limit": 1
       }
@@ -244,7 +244,7 @@ export class P2PNetworkService {
     console.log(`Received Nostr event from ${fromNode}:`, event.id);
     
     // Convert Nostr event to P2P message format
-    if (event.kind === 30000) { // Parc3l discovery event
+    if (event.kind === 30000) { // GMChat discovery event
       const p2pMessage: P2PMessage = {
         id: event.id,
         threadId: event.tags?.find((tag: any[]) => tag[0] === 'thread')?.[1] || '',
@@ -369,7 +369,7 @@ export class P2PNetworkService {
         id: message.id,
         pubkey: message.sender,
         created_at: Math.floor(message.timestamp / 1000),
-        kind: 30000, // Custom kind for Parc3l messages
+        kind: 30000, // Custom kind for GMChat messages
         tags: [
           ['thread', message.threadId],
           ['recipient', message.recipient],

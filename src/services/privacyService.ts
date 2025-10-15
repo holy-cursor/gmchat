@@ -45,9 +45,9 @@ export interface MessageForwardingRule {
 }
 
 class PrivacyService {
-  private static readonly STORAGE_KEY = 'parc3l_privacy_settings';
-  private static readonly BLOCKED_CONTACTS_KEY = 'parc3l_blocked_contacts';
-  private static readonly FORWARDING_RULES_KEY = 'parc3l_forwarding_rules';
+  private static readonly STORAGE_KEY = 'gmchat_privacy_settings';
+  private static readonly BLOCKED_CONTACTS_KEY = 'gmchat_blocked_contacts';
+  private static readonly FORWARDING_RULES_KEY = 'gmchat_forwarding_rules';
   
   // Default privacy settings
   private static readonly DEFAULT_SETTINGS: PrivacySettings = {

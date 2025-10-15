@@ -1,4 +1,4 @@
-// EVM-specific types for Parc3l
+// EVM-specific types for GMChat
 
 export interface EVMChain {
   id: number;

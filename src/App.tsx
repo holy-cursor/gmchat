@@ -197,7 +197,7 @@ function AppContent() {
       // For demo purposes, auto-authenticate with wallet address
       // In production, require actual wallet signature
       const mockSignature = '0x' + '0'.repeat(130); // Mock signature
-      const mockMessage = `Sign this message to authenticate with Parc3l: ${Date.now()}`;
+      const mockMessage = `Sign this message to authenticate with GMChat: ${Date.now()}`;
       
       const authResult = await SecureAuthService.authenticateWithWallet(
         evmAddress,

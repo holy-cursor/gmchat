@@ -77,7 +77,7 @@ app.get('/health', (req, res) => {
 // Start server
 const PORT = process.env.PORT || 9001;
 server.listen(PORT, () => {
-  console.log('🚀 Parc3l Simple Relay Server started!');
+  console.log('🚀 GMChat Simple Relay Server started!');
   console.log(`📡 WebSocket server running on ws://localhost:${PORT}/ws`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
   console.log(`👥 Connected peers: ${peers.size}`);

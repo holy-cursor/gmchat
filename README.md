@@ -1,6 +1,6 @@
-# 🔐 Secure P2P Messaging App
+# 🔐 GMChat - Secure P2P Messaging App
 
-A decentralized, end-to-end encrypted messaging application built with React, WebSocket relay, and IPFS storage. Features enterprise-grade security with ECDH key exchange and zero-knowledge architecture.
+GMChat is a decentralized, end-to-end encrypted messaging application built with React, WebSocket relay, and IPFS storage. Features enterprise-grade security with ECDH key exchange and zero-knowledge architecture.
 
 ## ✨ Features
 

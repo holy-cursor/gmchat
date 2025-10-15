@@ -1,7 +1,7 @@
 {
-  "name": "parc3l",
+  "name": "gmchat",
   "version": "1.0.0",
-  "description": "A decentralized messaging app built as a Base Mini App",
+  "description": "GMChat - A decentralized messaging app built as a Base Mini App",
   "private": true,
   "dependencies": {
     "@chainsafe/libp2p-gossipsub": "^14.1.2",

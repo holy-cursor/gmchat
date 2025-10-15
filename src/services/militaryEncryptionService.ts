@@ -27,7 +27,7 @@ export interface KeyPair {
 }
 
 class MilitaryEncryptionService {
-  private static readonly STORAGE_KEY = 'parc3l_military_keys';
+  private static readonly STORAGE_KEY = 'gmchat_military_keys';
   
   // Encryption configurations
   private static readonly CONFIGS: Record<string, EncryptionConfig> = {

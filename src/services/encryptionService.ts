@@ -15,7 +15,7 @@ export interface EncryptedMessage {
 }
 
 class EncryptionService {
-  private static readonly STORAGE_KEY = 'parc3l_encryption_keys';
+  private static readonly STORAGE_KEY = 'gmchat_encryption_keys';
   private static readonly KEY_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
 
   /**

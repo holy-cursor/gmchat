@@ -61,7 +61,7 @@ export type AuditEventType =
   | 'encryption_error';
 
 class AuditLogService {
-  private static readonly STORAGE_KEY = 'parc3l_audit_logs';
+  private static readonly STORAGE_KEY = 'gmchat_audit_logs';
   private static readonly MAX_LOGS = 10000; // Keep last 10k entries
   private static readonly RETENTION_DAYS = 90; // Keep logs for 90 days
   

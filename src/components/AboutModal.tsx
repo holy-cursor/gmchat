@@ -22,7 +22,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             <h3 className={`text-2xl font-bold ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}>
-              About Parc3l
+              About GMChat
             </h3>
             <button
               onClick={onClose}
@@ -36,7 +36,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           
           <div className={`space-y-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             <p>
-              Parc3l is a decentralized messaging app built as a Base Mini App, enabling seamless communication on the Base blockchain.
+              GMChat is a decentralized messaging app built as a Base Mini App, enabling seamless communication on the Base blockchain.
             </p>
             
             <p>

@@ -87,7 +87,7 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
           {/* App Title - Clean and simple */}
           <div className="flex items-center min-w-0 flex-1">
             <h1 className={`text-xl sm:text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>
-              Parc3l
+              GMChat
             </h1>
           </div>
 

@@ -45,8 +45,8 @@ const Header: React.FC<HeaderProps> = ({
             <h1 className={`text-xl sm:text-2xl font-bold truncate ${
               isDark ? 'text-white' : 'text-gray-900'
             }`}>
-              <span className="hidden sm:inline">Parc3l</span>
-              <span className="sm:hidden">P3L</span>
+              <span className="hidden sm:inline">GMChat</span>
+              <span className="sm:hidden">GMC</span>
             </h1>
             <p className={`text-sm font-medium hidden sm:block ${
               isDark ? 'text-gray-400' : 'text-gray-600'
