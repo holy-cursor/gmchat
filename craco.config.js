@@ -12,6 +12,12 @@ module.exports = {
         fs: false,
         net: false,
         tls: false,
+        os: require.resolve('os-browserify/browser'),
+        dgram: require.resolve('dgram-browserify'),
+        http: require.resolve('stream-http'),
+        https: require.resolve('https-browserify'),
+        tty: require.resolve('tty-browserify'),
+        zlib: require.resolve('browserify-zlib'),
       };
       
       // Ignore source map warnings
@@ -19,6 +25,8 @@ module.exports = {
         /Failed to parse source map/,
         /Module not found: Error: Can't resolve 'crypto'/,
         /Module not found: Error: Can't resolve 'stream'/,
+        /Module not found: Error: Can't resolve 'dgram'/,
+        /Module not found: Error: Can't resolve 'os'/,
       ];
       
       return webpackConfig;

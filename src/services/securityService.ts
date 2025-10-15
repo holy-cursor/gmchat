@@ -187,6 +187,7 @@ class SecurityService {
       /(.)\1{10,}/g, // Repeated characters
       /https?:\/\/[^\s]+/g, // URLs
       /[A-Z]{10,}/g, // Excessive caps
+      // eslint-disable-next-line no-useless-escape
       /[!@#$%^&*()_+=[\]{}|;':",./<>?]{5,}/g // Excessive special characters
     ];
 

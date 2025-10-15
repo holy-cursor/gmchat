@@ -102,28 +102,62 @@ const BaseMiniAppConversationView: React.FC<BaseMiniAppConversationViewProps> = 
   const displayAddress = conversation.contact?.address;
 
   return (
-    <div className="flex-1 flex flex-col h-full">
-      {/* Fixed header */}
-      <div className={`fixed top-0 left-0 right-0 z-20 flex items-center justify-between p-3 sm:p-4 border-b ${
+    <div className={`fixed inset-0 z-50 flex flex-col h-screen w-screen ${
+      isDark ? 'bg-gray-800' : 'bg-white'
+    }`}>
+      {/* Header */}
+      <div className={`p-4 border-b flex items-center justify-between ${
         isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
       }`}>
-        <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
           <button
             onClick={onBack}
-            className={`p-2 rounded-xl transition-colors flex-shrink-0 ${
-              isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
-            }`}
+            style={{
+              padding: '12px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-6 h-6" />
           </button>
           
-          <div className="flex-1 min-w-0">
-            <h2 className={`text-base sm:text-lg font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {displayName}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: isDark ? '#ffffff' : '#111827',
+              margin: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              {displayName || 'Unknown Contact'}
             </h2>
-            <p className={`text-xs sm:text-sm truncate flex items-center ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              <span className="w-2 h-2 bg-green-500 rounded-full mr-2 flex-shrink-0"></span>
-              {displayAddress ? `${displayAddress.slice(0, 6)}...${displayAddress.slice(-4)}` : 'Unknown'}
+            <p style={{
+              fontSize: '14px',
+              color: isDark ? '#9ca3af' : '#6b7280',
+              margin: '4px 0 0 0',
+              display: 'flex',
+              alignItems: 'center',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}>
+              <span style={{
+                width: '8px',
+                height: '8px',
+                backgroundColor: '#10b981',
+                borderRadius: '50%',
+                marginRight: '8px',
+                flexShrink: 0
+              }}></span>
+              {displayAddress ? `${displayAddress.slice(0, 6)}...${displayAddress.slice(-4)}` : 'Unknown Address'}
             </p>
           </div>
         </div>
@@ -168,7 +202,7 @@ const BaseMiniAppConversationView: React.FC<BaseMiniAppConversationViewProps> = 
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4 pt-20 space-y-3 sm:space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
         {decryptedMessages.map((message, index) => {
           const isReceived = message.sender !== currentWalletAddress;
           const isLastMessage = index === decryptedMessages.length - 1;
@@ -245,8 +279,10 @@ const BaseMiniAppConversationView: React.FC<BaseMiniAppConversationViewProps> = 
       </div>
 
       {/* Message Input */}
-      <div className={`p-3 sm:p-4 border-t ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'}`}>
-        <div className="flex items-center space-x-2 sm:space-x-3">
+      <div className={`p-4 border-t ${
+        isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
+      }`}>
+        <div className="flex items-center gap-3">
           <div className="flex-1">
             <input
               type="text"

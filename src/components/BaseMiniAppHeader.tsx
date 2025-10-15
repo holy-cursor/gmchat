@@ -23,6 +23,9 @@ interface BaseMiniAppHeaderProps {
   onTestDatabase: () => void;
   ultraLowCostMode: boolean;
   onToggleUltraLowCostMode: () => void;
+  useP2PMode: boolean;
+  onToggleP2PMode: () => void;
+  p2pConnected: boolean;
 }
 
 const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
@@ -45,11 +48,15 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
   onTestDatabase,
   ultraLowCostMode,
   onToggleUltraLowCostMode,
+  useP2PMode,
+  onToggleP2PMode,
+  p2pConnected,
 }) => {
   const { isDark, toggleTheme } = useTheme();
   const [isDevMode] = useState(false);
   const [showDevMenu, setShowDevMenu] = useState(false);
   const [showMainMenu, setShowMainMenu] = useState(false);
+  const [showProfilesMenu, setShowProfilesMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -58,6 +65,7 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowMainMenu(false);
         setShowDevMenu(false);
+        setShowProfilesMenu(false);
       }
     };
 
@@ -76,19 +84,11 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
       {/* Mobile-first responsive header */}
       <div className="px-4 py-3 sm:px-6">
         <div className="flex items-center justify-between gap-3">
-          {/* App Title & Logo - Flexible width */}
-          <div className="flex items-center space-x-3 min-w-0 flex-1">
-            <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-xl bg-blue-500 flex items-center justify-center flex-shrink-0">
-              <MessageCircle className="w-5 h-5 sm:w-4 sm:h-4 text-white" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h1 className={`text-xl sm:text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>
-                Parc3l
-              </h1>
-              <p className={`text-sm sm:text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'} truncate`}>
-                Base Mini App
-              </p>
-            </div>
+          {/* App Title - Clean and simple */}
+          <div className="flex items-center min-w-0 flex-1">
+            <h1 className={`text-xl sm:text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'} truncate`}>
+              Parc3l
+            </h1>
           </div>
 
           {/* Action Buttons - Hidden on mobile, shown in FAB */}
@@ -147,6 +147,16 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
                 isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
               }`}>
                 <div className="p-3 space-y-1">
+                  {/* Web Mode Indicator */}
+                  <div className={`px-4 py-3 text-sm font-medium ${
+                    isDark ? 'text-blue-400' : 'text-blue-600'
+                  }`}>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"></div>
+                      <span className="truncate">Web Mode</span>
+                    </div>
+                  </div>
+
                   {/* Dark Mode Toggle */}
                   <button
                     onClick={() => {
@@ -206,6 +216,19 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
                   >
                     <Code className="w-5 h-5 flex-shrink-0" />
                     <span className="truncate">{isDevMode ? 'Developer Menu' : 'Developer Mode'}</span>
+                  </button>
+
+                  {/* Profiles */}
+                  <button
+                    onClick={() => {
+                      setShowProfilesMenu(!showProfilesMenu);
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors flex items-center space-x-3 ${
+                      isDark ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <UserPlus className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">Profiles</span>
                   </button>
 
                   {/* About/Settings */}
@@ -270,6 +293,42 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
                         <span
                           className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
                             ultraLowCostMode ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    {/* P2P Mode Toggle */}
+                    <div className="flex items-center justify-between px-3 py-2">
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-sm font-medium ${
+                          isDark ? 'text-gray-300' : 'text-gray-700'
+                        }`}>
+                          P2P Mode
+                        </span>
+                        {p2pConnected && (
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            isDark ? 'bg-green-900/30 text-green-300' : 'bg-green-100 text-green-700'
+                          }`}>
+                            Connected
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={onToggleP2PMode}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          useP2PMode
+                            ? isDark
+                              ? 'bg-purple-600'
+                              : 'bg-purple-500'
+                            : isDark
+                              ? 'bg-gray-600'
+                              : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            useP2PMode ? 'translate-x-6' : 'translate-x-1'
                           }`}
                         />
                       </button>
@@ -376,15 +435,40 @@ const BaseMiniAppHeader: React.FC<BaseMiniAppHeaderProps> = ({
                   </div>
                 </div>
               )}
+
+            {/* Profiles Menu Dropdown */}
+            {showProfilesMenu && (
+              <div className={`absolute right-0 top-full mt-2 w-64 sm:w-56 rounded-xl border shadow-lg z-50 ${
+                isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'
+              }`}>
+                <div className="p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className={`text-sm font-semibold ${
+                      isDark ? 'text-white' : 'text-gray-900'
+                    }`}>
+                      Wallet Profile
+                    </h3>
+                    <button
+                      onClick={() => setShowProfilesMenu(false)}
+                      className={`p-1 rounded-lg transition-colors ${
+                        isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'
+                      }`}
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {/* Wallet Connection */}
+                    <div className="w-full">
+                      {walletButton}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-        </div>
-
-        {/* Wallet Connection - Mobile Optimized, Full Width */}
-        <div className="mt-4 px-1">
-          <div className="w-full">
-            {walletButton}
-          </div>
         </div>
       </div>
     </header>

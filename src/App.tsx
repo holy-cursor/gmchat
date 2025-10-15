@@ -9,17 +9,17 @@ import BaseMiniAppWallet from './components/BaseMiniAppWallet';
 import AboutModal from './components/AboutModal';
 import SuccessModal from './components/SuccessModal';
 import ErrorBoundary from './components/ErrorBoundary';
-import { Contact, Conversation } from './types';
+import { Contact, Conversation, Message } from './types';
 import { MessageStorageService } from './services/messageStorage';
 import HybridDatabaseService from './services/hybridDatabaseService';
 import SecureDatabaseService from './services/secureDatabaseService';
 import SecureAuthService from './services/secureAuthService';
+import P2PIntegrationService from './services/p2pIntegrationService';
 import ContactList from './components/ContactList';
 import BaseMiniAppConversationView from './components/BaseMiniAppConversationView';
 import AddContactModal from './components/AddContactModal';
 import ContactTagModal from './components/ContactTagModal';
 import CaptchaModal from './components/CaptchaModal';
-import MiniAppModeIndicator from './components/MiniAppModeIndicator';
 import PrivacySettingsModal from './components/PrivacySettingsModal';
 // import DatabaseTest from './components/DatabaseTest';
 import './utils/ipfsTest'; // Load IPFS test utility
@@ -49,6 +49,9 @@ function AppContent() {
   const [ultraLowCostMode, setUltraLowCostMode] = useState(false); // Database-only mode (no blockchain)
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Authentication state
   const [useSecureMode] = useState(true); // Enable secure mode by default
+  const [useP2PMode, setUseP2PMode] = useState(true); // Enable P2P mode by default
+  const [p2pService, setP2PService] = useState<P2PIntegrationService | null>(null);
+  const [p2pConnected, setP2PConnected] = useState(false);
   
   // Modal state
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
@@ -224,6 +227,100 @@ function AppContent() {
     }
   }, [evmAddress, authenticateUser]);
 
+  // Initialize P2P service
+  const initializeP2PService = useCallback(async () => {
+    console.log('🔍 initializeP2PService called with evmAddress:', evmAddress);
+    
+    if (!evmAddress) {
+      console.log('❌ No evmAddress, skipping P2P initialization');
+      return;
+    }
+
+    try {
+      console.log('🚀 Initializing P2P service for wallet:', evmAddress);
+      
+      const service = new P2PIntegrationService({
+        walletAddress: evmAddress,
+        enableP2P: true,
+        fallbackToOnChain: true
+      });
+
+      await service.initialize();
+      
+      // Register message handler for real-time updates
+      service.registerMessageHandler('*', (message: Message) => {
+        console.log('P2P message received:', message);
+        
+        // Update contacts and conversation
+        loadContacts();
+        
+        // Update current conversation if viewing the sender
+        if (selectedContact && 
+            (message.sender === selectedContact.address || message.recipient === selectedContact.address)) {
+          const updatedConversation = MessageStorageService.getConversation(evmAddress, selectedContact.address);
+          setCurrentConversation(updatedConversation);
+        }
+        
+        toast.success('New P2P message received!');
+      });
+
+      setP2PService(service);
+      
+      // Check connection status after a delay to allow connections to establish
+      setTimeout(() => {
+        const connectionStatus = service.getConnectionStatus();
+        setP2PConnected(connectionStatus.connected);
+        console.log('P2P connection status:', connectionStatus);
+      }, 2000); // Wait 2 seconds for connections to establish
+      
+      // Set up periodic connection status checks
+      const statusCheckInterval = setInterval(() => {
+        if (service) {
+          const connectionStatus = service.getConnectionStatus();
+          setP2PConnected(connectionStatus.connected);
+          if (connectionStatus.connected) {
+            clearInterval(statusCheckInterval); // Stop checking once connected
+          }
+        } else {
+          clearInterval(statusCheckInterval); // Stop checking if service is null
+        }
+      }, 1000); // Check every second
+      
+      console.log('P2P service initialized successfully');
+    } catch (error) {
+      console.error('Failed to initialize P2P service:', error);
+      toast.error('P2P service initialization failed, falling back to on-chain messaging');
+    }
+  }, [evmAddress]); // Only depend on evmAddress
+
+  // Cleanup P2P service
+  const cleanupP2PService = useCallback(() => {
+    if (p2pService) {
+      p2pService.cleanup();
+      setP2PService(null);
+      setP2PConnected(false);
+      console.log('P2P service cleaned up');
+    }
+  }, []); // No dependencies to prevent re-creation
+
+  // Initialize P2P service when wallet connects
+  useEffect(() => {
+    console.log('🔍 P2P useEffect triggered:', { evmAddress, useP2PMode, p2pService: !!p2pService });
+    
+    if (evmAddress && useP2PMode) {
+      // Only initialize if not already initialized
+      if (!p2pService) {
+        console.log('🚀 Starting P2P service initialization...');
+        initializeP2PService();
+      } else {
+        console.log('⚠️ P2P service already exists, skipping initialization');
+      }
+    } else {
+      console.log('🧹 Cleaning up P2P service...');
+      cleanupP2PService();
+    }
+  }, [evmAddress, useP2PMode]); // Removed function dependencies
+
   // Real-time sync with hybrid database
   useEffect(() => {
     if (!evmAddress || !useHybridMode) return;
@@ -328,7 +425,7 @@ function AppContent() {
 
   // EVM message sending handler
   const handleEVMMessage = useCallback(async (recipient: string, content: string, chainId: number): Promise<void> => {
-    console.log('📨 handleEVMMessage called with:', { recipient, content, chainId, ultraLowCostMode });
+    console.log('📨 handleEVMMessage called with:', { recipient, content, chainId, ultraLowCostMode, useP2PMode, p2pConnected });
     console.log('🔗 EVM Wallet state check:', {
       evmConnected,
       evmAddress,
@@ -340,6 +437,55 @@ function AppContent() {
       console.error('❌ EVM wallet not connected:', { evmConnected, evmAddress });
       toast.error('Please connect your Base wallet first');
       return;
+    }
+
+    // Try P2P messaging first if available (regardless of p2pConnected state)
+    if (useP2PMode && p2pService && p2pService.isReady()) {
+      try {
+        const connectionStatus = p2pService.getConnectionStatus();
+        console.log('🚀 Attempting P2P messaging...', { 
+          p2pServiceExists: !!p2pService, 
+          p2pConnected, 
+          useP2PMode,
+          connectionStatus,
+          p2pServiceReady: p2pService.isReady()
+        });
+        const messageId = await p2pService.sendMessage(recipient, content);
+        console.log('✅ P2P message sent successfully:', messageId);
+        
+        // Store message locally for UI consistency
+        const messageToStore = {
+          sender: evmAddress,
+          recipient: recipient,
+          content: content,
+          messageType: 'text' as const,
+          transactionSignature: messageId,
+          chainType: 'evm' as const,
+          chainId: chainId,
+          isEncrypted: true,
+          isRead: false
+        };
+
+        MessageStorageService.storeMessage(messageToStore);
+        
+        // Update UI
+        await loadContacts();
+        if (selectedContact && selectedContact.address === recipient) {
+          const updatedConversation = MessageStorageService.getConversation(evmAddress, recipient);
+          setCurrentConversation(updatedConversation);
+        }
+        
+        toast.success('P2P message sent successfully!');
+        return;
+      } catch (p2pError) {
+        console.warn('❌ P2P messaging failed, falling back to on-chain:', p2pError);
+        console.log('P2P Error details:', {
+          error: p2pError,
+          message: p2pError instanceof Error ? p2pError.message : 'Unknown error',
+          stack: p2pError instanceof Error ? p2pError.stack : undefined
+        });
+        toast.error('P2P failed, using on-chain messaging...');
+      }
     }
 
     try {
@@ -487,7 +633,7 @@ function AppContent() {
       toast.error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error; // Re-throw to be caught by handleCaptchaVerify
     }
-  }, [evmConnected, evmAddress, evmChainId, selectedWalletType, loadContacts, selectedContact, useHybridMode, ultraLowCostMode, useSecureMode, isAuthenticated]);
+  }, [evmConnected, evmAddress, evmChainId, selectedWalletType, loadContacts, selectedContact, useHybridMode, ultraLowCostMode, useSecureMode, isAuthenticated, p2pConnected, p2pService, useP2PMode]);
 
   const handleSendMessage = useCallback(async (content?: string, recipient?: string): Promise<void> => {
     const currentWalletAddress = evmAddress;
@@ -935,12 +1081,13 @@ function AppContent() {
                onTestDatabase={() => {}}
                ultraLowCostMode={ultraLowCostMode}
                onToggleUltraLowCostMode={() => setUltraLowCostMode(!ultraLowCostMode)}
+               useP2PMode={useP2PMode}
+               onToggleP2PMode={() => setUseP2PMode(!useP2PMode)}
+               p2pConnected={p2pConnected}
              />
         
         {/* Mode Indicators */}
         <div className="px-4 py-2 space-y-2">
-          <MiniAppModeIndicator onModeChange={() => {}} />
-          
           {/* Security Mode Indicator */}
           {useSecureMode && isAuthenticated && (
             <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
@@ -950,6 +1097,30 @@ function AppContent() {
             }`}>
               <span className="text-green-500">🔒</span>
               <span className="truncate">Secure Mode: End-to-end encrypted with RLS protection</span>
+            </div>
+          )}
+          
+          {/* P2P Mode Indicator */}
+          {useP2PMode && p2pConnected && (
+            <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+              isDark
+                ? 'bg-purple-900/30 text-purple-300'
+                : 'bg-purple-100 text-purple-700'
+            }`}>
+              <span className="text-purple-500">🌐</span>
+              <span className="truncate">P2P Ready: Decentralized messaging via peer-to-peer network</span>
+            </div>
+          )}
+          
+          {/* P2P Disconnected Indicator */}
+          {useP2PMode && !p2pConnected && (
+            <div className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium ${
+              isDark
+                ? 'bg-yellow-900/30 text-yellow-300'
+                : 'bg-yellow-100 text-yellow-700'
+            }`}>
+              <span className="text-yellow-500">⚠️</span>
+              <span className="truncate">P2P Initializing: Setting up peer-to-peer network...</span>
             </div>
           )}
           
@@ -965,6 +1136,38 @@ function AppContent() {
             </div>
           )}
         </div>
+
+        {/* Prominent Wallet Connection - Show when not connected */}
+        {!evmConnected && (
+          <div className={`mx-4 mb-4 p-6 rounded-xl border-2 border-dashed ${
+            isDark 
+              ? 'bg-blue-900/20 border-blue-500/50' 
+              : 'bg-blue-50 border-blue-300'
+          }`}>
+            <div className="text-center">
+              <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                isDark ? 'bg-blue-600' : 'bg-blue-500'
+              }`}>
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className={`text-lg font-semibold mb-2 ${
+                isDark ? 'text-white' : 'text-gray-900'
+              }`}>
+                Connect Your Wallet
+              </h3>
+              <p className={`text-sm mb-4 ${
+                isDark ? 'text-gray-300' : 'text-gray-600'
+              }`}>
+                Connect your Base wallet to start sending encrypted messages
+              </p>
+              <div className="max-w-xs mx-auto">
+                <BaseMiniAppWallet onWalletTypeChange={handleWalletTypeChange} />
+              </div>
+            </div>
+          </div>
+        )}
         
         <main className="flex flex-1 overflow-hidden min-h-0">
           {/* Contact List - Hidden on mobile when conversation is selected */}
@@ -986,8 +1189,8 @@ function AppContent() {
             />
           </div>
           
-          {/* Conversation View */}
-          <div className={`${selectedContact ? 'block' : 'hidden lg:block'} flex-1 flex flex-col min-w-0 overflow-hidden`}>
+          {/* Conversation View - Full Screen Overlay */}
+          {selectedContact && (
             <BaseMiniAppConversationView
               conversation={currentConversation}
               onBack={() => {
@@ -999,7 +1202,7 @@ function AppContent() {
               isSending={isSending}
               currentWalletAddress={evmAddress || ''}
             />
-          </div>
+          )}
         </main>
 
         {/* Floating Action Button - Mobile Only - Hidden in chat */}

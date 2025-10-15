@@ -1,0 +1,28 @@
+{
+  "name": "parc3l-p2p-relay",
+  "version": "1.0.0",
+  "description": "P2P Relay Server for Parc3l Decentralized Messaging",
+  "main": "relay-server.js",
+  "scripts": {
+    "start": "node relay-server.js",
+    "dev": "nodemon relay-server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "p2p",
+    "websocket",
+    "relay",
+    "messaging",
+    "decentralized"
+  ],
+  "author": "Parc3l Team",
+  "license": "MIT"
+}
