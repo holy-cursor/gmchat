@@ -223,8 +223,7 @@ export class SimpleP2PService {
             const P2PEncryptionService = await import('./p2pEncryptionService');
             const isValid = await P2PEncryptionService.default.verifySignature(
               p2pMessage, 
-              message.signature, 
-              message.sender // Using sender as public key for verification
+              message.signature
             );
             
             if (!isValid) {
