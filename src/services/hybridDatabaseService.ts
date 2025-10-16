@@ -231,7 +231,7 @@ export class HybridDatabaseService {
           table: 'messages',
           filter: `or(sender.eq.${walletAddress},recipient.eq.${walletAddress})`
         },
-        (payload) => {
+        (payload: any) => {
           const dbMessage = payload.new as DatabaseMessage;
           const message: Message = {
             id: dbMessage.id,
