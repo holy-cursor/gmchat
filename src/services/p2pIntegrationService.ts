@@ -38,7 +38,7 @@ export class P2PIntegrationService {
         // Create Simple P2P service with wallet-specific node ID (singleton)
         const simpleP2PConfig = {
           nodeId: `node_${this.config.walletAddress.slice(2, 10)}`,
-          relayUrl: 'ws://localhost:9001/ws',
+          relayUrl: process.env.NODE_ENV === 'production' ? 'wss://relay.damus.io' : 'ws://localhost:9001/ws',
           enableP2P: true
         };
 

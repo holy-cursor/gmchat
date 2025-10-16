@@ -1,16 +1,23 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase configuration
-const supabaseUrl = 'https://jjgrvaonocjpaarinjmc.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqZ3J2YW9ub2NqcGFhcmluam1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNTQwNjYsImV4cCI6MjA3NDgzMDA2Nn0.yux-6sAfZecnmxbjvTTi16VIEYR-WjuJdkLPESjEAW0';
+// Supabase configuration - Optional for production
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://jjgrvaonocjpaarinjmc.supabase.co';
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpqZ3J2YW9ub2NqcGFhcmluam1jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNTQwNjYsImV4cCI6MjA3NDgzMDA2Nn0.yux-6sAfZecnmxbjvTTi16VIEYR-WjuJdkLPESjEAW0';
 
-// For now, we'll use a placeholder. You'll need to:
-// 1. Go to https://supabase.com
-// 2. Create a new project
-// 3. Get your project URL and anon key
-// 4. Replace the values above
+// Create Supabase client with error handling
+let supabase: any = null;
+try {
+  if (supabaseUrl && supabaseAnonKey) {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    console.log('✅ Supabase client initialized');
+  } else {
+    console.warn('⚠️ Supabase credentials not found, using local storage only');
+  }
+} catch (error) {
+  console.warn('⚠️ Failed to initialize Supabase, using local storage only:', error);
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export { supabase };
 
 // Database schema for messages
 export interface DatabaseMessage {

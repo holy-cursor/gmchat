@@ -25,7 +25,7 @@ export class P2PMessagingService {
     
     this.simpleP2P = SimpleP2PService.getInstance({
       nodeId: config.nodeId,
-      relayUrl: 'ws://localhost:9001/ws',
+      relayUrl: process.env.NODE_ENV === 'production' ? 'wss://relay.damus.io' : 'ws://localhost:9001/ws',
       enableP2P: config.enableP2P
     });
   }

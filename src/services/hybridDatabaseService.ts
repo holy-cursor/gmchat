@@ -41,6 +41,11 @@ export class HybridDatabaseService {
         public_key: message.publicKey
       };
 
+      if (!supabase) {
+        console.warn('⚠️ Supabase not available, using local storage only');
+        return this.storeMessageLocally(message);
+      }
+
       const { data, error } = await supabase
         .from('messages')
         .insert([dbMessage])
@@ -48,7 +53,8 @@ export class HybridDatabaseService {
         .single();
 
       if (error) {
-        throw new Error(`Database error: ${error.message}`);
+        console.warn('⚠️ Supabase storage failed, using local storage only:', error.message);
+        return this.storeMessageLocally(message);
       }
 
       // 3. Convert back to Message format
