@@ -43,7 +43,19 @@ export class HybridDatabaseService {
 
       if (!supabase) {
         console.warn('⚠️ Supabase not available, using local storage only');
-        return this.storeMessageLocally(message);
+        // Create a simple message with ID and timestamp for local storage
+        const localMessage: Message = {
+          id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          ...message,
+          timestamp: Date.now()
+        };
+        
+        // Store in localStorage
+        const existingMessages = JSON.parse(localStorage.getItem('gmchat_messages') || '[]');
+        existingMessages.push(localMessage);
+        localStorage.setItem('gmchat_messages', JSON.stringify(existingMessages));
+        
+        return localMessage;
       }
 
       const { data, error } = await supabase
@@ -54,7 +66,19 @@ export class HybridDatabaseService {
 
       if (error) {
         console.warn('⚠️ Supabase storage failed, using local storage only:', error.message);
-        return this.storeMessageLocally(message);
+        // Create a simple message with ID and timestamp for local storage
+        const localMessage: Message = {
+          id: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          ...message,
+          timestamp: Date.now()
+        };
+        
+        // Store in localStorage
+        const existingMessages = JSON.parse(localStorage.getItem('gmchat_messages') || '[]');
+        existingMessages.push(localMessage);
+        localStorage.setItem('gmchat_messages', JSON.stringify(existingMessages));
+        
+        return localMessage;
       }
 
       // 3. Convert back to Message format
