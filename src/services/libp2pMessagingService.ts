@@ -79,7 +79,7 @@ export class Libp2pMessagingService {
         ],
         connectionManager: {
           maxConnections: this.maxConnections,
-          connectionTimeout: this.config.connectionTimeout || 10000
+          connectionCloseTimeout: this.config.connectionTimeout || 10000
         },
         dialer: {
           maxDialsPerPeer: 1,
