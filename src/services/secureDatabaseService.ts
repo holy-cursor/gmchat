@@ -279,7 +279,7 @@ export class SecureDatabaseService {
             schema: 'public', 
             table: 'secure_messages' 
           }, 
-          async (payload) => {
+          async (payload: any) => {
             try {
               const dbMessage = payload.new as any;
               
