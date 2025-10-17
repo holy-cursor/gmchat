@@ -56,7 +56,6 @@ export class Libp2pMessagingService {
 
       // Create libp2p instance with optimized configuration
       this.libp2p = await createLibp2p({
-        peerId: peerId,
         addresses: {
           listen: [
             '/ip4/0.0.0.0/tcp/0/ws',
