@@ -1,12 +1,19 @@
 /**
- * IPFS-based P2P Messaging Service
- * Uses IPFS for cross-device message delivery
- * Simpler and more reliable than libp2p
+ * libp2p Messaging Service
+ * Properly configured for cross-device P2P messaging
+ * Optimized to prevent performance issues
  */
 
+import { createLibp2p } from 'libp2p';
+import type { Libp2p } from '@libp2p/interface';
+import { webSockets } from '@libp2p/websockets';
+import { webRTC } from '@libp2p/webrtc';
+import { mplex } from '@libp2p/mplex';
+import { noise } from '@libp2p/noise';
+import { bootstrap } from '@libp2p/bootstrap';
+import { createEd25519PeerId } from '@libp2p/peer-id-factory';
 import { Message, Contact } from '../types';
 import { P2PMessage } from '../types/p2pMessage';
-import IPFSService from './ipfsService';
 
 export interface Libp2pConfig {
   nodeId: string;
@@ -171,11 +178,16 @@ export class Libp2pMessagingService {
       // Create message
       const message: P2PMessage = {
         id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        threadId: `thread_${this.libp2p.peerId.toString()}_${recipient}`,
+        sequence: 1,
         sender: this.libp2p.peerId.toString(),
         recipient: recipient,
         content: content,
-        messageType: messageType,
+        contentType: messageType,
+        encryptionKey: '',
+        nonce: '',
         timestamp: Date.now(),
+        ttl: 86400,
         deliveryStatus: 'delivered',
         acks: [],
         storageLocation: 'hot',
@@ -203,11 +215,16 @@ export class Libp2pMessagingService {
 
     const message: P2PMessage = {
       id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      threadId: `thread_${this.libp2p.peerId.toString()}_${recipient}`,
+      sequence: 1,
       sender: this.libp2p.peerId.toString(),
       recipient: recipient,
       content: content,
-      messageType: messageType,
+      contentType: messageType,
+      encryptionKey: '',
+      nonce: '',
       timestamp: Date.now(),
+      ttl: 86400,
       deliveryStatus: 'delivered',
       acks: [],
       storageLocation: 'hot',
