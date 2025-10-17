@@ -86,11 +86,16 @@ export class IPFSP2PService {
       // Create message
       const message: P2PMessage = {
         id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        threadId: `thread_${this.config.nodeId}_${recipient}`,
+        sequence: 1,
         sender: this.config.nodeId,
         recipient: recipient,
         content: content,
-        messageType: messageType,
+        contentType: messageType,
+        encryptionKey: '',
+        nonce: '',
         timestamp: Date.now(),
+        ttl: 86400, // 24 hours
         deliveryStatus: 'delivered',
         acks: [],
         storageLocation: 'hot',
