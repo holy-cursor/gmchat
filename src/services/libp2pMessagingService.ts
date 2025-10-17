@@ -12,6 +12,7 @@ import { mplex } from '@libp2p/mplex';
 import { noise } from '@libp2p/noise';
 import { bootstrap } from '@libp2p/bootstrap';
 import { identify } from '@libp2p/identify';
+import { circuitRelayTransport } from '@libp2p/circuit-relay-v2';
 import { createEd25519PeerId } from '@libp2p/peer-id-factory';
 import { P2PMessage } from '../types/p2pMessage';
 
@@ -63,7 +64,8 @@ export class Libp2pMessagingService {
         },
         transports: [
           webRTC(),
-          webSockets() // WebSocket for connecting to other nodes
+          webSockets(), // WebSocket for connecting to other nodes
+          circuitRelayTransport() // Circuit relay for NAT traversal
         ],
         streamMuxers: [mplex()],
         connectionEncrypters: [noise()],
