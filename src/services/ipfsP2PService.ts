@@ -39,8 +39,8 @@ export class IPFSP2PService {
     console.log('🚀 IPFS P2P: Initializing IPFS-based P2P service...');
 
     try {
-      // Initialize IPFS service
-      await IPFSService.initialize();
+      // IPFSService doesn't need explicit initialization
+      console.log('✅ IPFS P2P: IPFS service ready');
       
       // Start polling for messages
       this.startPolling();
