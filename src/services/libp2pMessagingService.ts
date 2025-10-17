@@ -79,7 +79,6 @@ export class Libp2pMessagingService {
         ],
         connectionManager: {
           maxConnections: this.maxConnections,
-          minConnections: 1,
           connectionTimeout: this.config.connectionTimeout || 10000
         },
         dialer: {
