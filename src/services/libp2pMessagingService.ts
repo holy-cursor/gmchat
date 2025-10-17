@@ -12,7 +12,6 @@ import { mplex } from '@libp2p/mplex';
 import { noise } from '@libp2p/noise';
 import { bootstrap } from '@libp2p/bootstrap';
 import { createEd25519PeerId } from '@libp2p/peer-id-factory';
-import { Message, Contact } from '../types';
 import { P2PMessage } from '../types/p2pMessage';
 
 export interface Libp2pConfig {
@@ -122,12 +121,10 @@ export class Libp2pMessagingService {
       
       try {
         const chunks: Uint8Array[] = [];
-        const reader = stream.getReader();
         
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
+        // Read from the stream as an async iterable
+        for await (const chunk of stream) {
+          chunks.push(chunk);
         }
         
         const messageData = new Uint8Array(chunks.reduce((acc, chunk) => acc + chunk.length, 0));
@@ -195,10 +192,11 @@ export class Libp2pMessagingService {
 
       // Send message
       const stream = await this.libp2p.dialProtocol(recipientPeer, '/gmchat/1.0.0');
-      const writer = stream.getWriter();
       const messageData = new TextEncoder().encode(JSON.stringify(message));
-      await writer.write(messageData);
-      await writer.close();
+      
+      // Use the new send method
+      await stream.send(messageData);
+      await stream.close();
 
       console.log('✅ libp2p: Message sent successfully:', message.id);
       return message.id;
@@ -237,9 +235,11 @@ export class Libp2pMessagingService {
     for (const peer of peers) {
       try {
         const stream = await this.libp2p.dialProtocol(peer, '/gmchat/1.0.0');
-        const writer = stream.getWriter();
-        await writer.write(messageData);
-        await writer.close();
+        
+        // Use the new send method
+        await stream.send(messageData);
+        await stream.close();
+        
         console.log(`📤 libp2p: Broadcasted to peer ${peer.toString()}`);
       } catch (error) {
         console.warn(`⚠️ libp2p: Failed to broadcast to peer ${peer.toString()}:`, error);

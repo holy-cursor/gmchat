@@ -5,7 +5,7 @@
  */
 
 import { SimpleP2PService } from './simpleP2PService';
-import IPFSP2PService from './ipfsP2PService';
+import { Libp2pMessagingService } from './libp2pMessagingService';
 import { P2PMessage } from '../types/p2pMessage';
 import { Message } from '../types';
 
