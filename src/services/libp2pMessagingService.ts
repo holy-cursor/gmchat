@@ -11,6 +11,7 @@ import { webRTC } from '@libp2p/webrtc';
 import { mplex } from '@libp2p/mplex';
 import { noise } from '@libp2p/noise';
 import { bootstrap } from '@libp2p/bootstrap';
+import { identify } from '@libp2p/identify';
 import { createEd25519PeerId } from '@libp2p/peer-id-factory';
 import { P2PMessage } from '../types/p2pMessage';
 
@@ -66,6 +67,9 @@ export class Libp2pMessagingService {
         ],
         streamMuxers: [mplex()],
         connectionEncrypters: [noise()],
+        services: {
+          identify: identify()
+        },
         peerDiscovery: [
           bootstrap({
             list: [
