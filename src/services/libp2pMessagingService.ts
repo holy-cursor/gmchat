@@ -1,18 +1,12 @@
 /**
- * libp2p Messaging Service
- * Properly configured for cross-device P2P messaging
- * Optimized to prevent performance issues
+ * IPFS-based P2P Messaging Service
+ * Uses IPFS for cross-device message delivery
+ * Simpler and more reliable than libp2p
  */
 
-import { createLibp2p, Libp2p } from 'libp2p';
-import { webSockets } from '@libp2p/websockets';
-import { webRTC } from '@libp2p/webrtc';
-import { mplex } from '@libp2p/mplex';
-import { noise } from '@libp2p/noise';
-import { bootstrap } from '@libp2p/bootstrap';
-import { createEd25519PeerId } from '@libp2p/peer-id-factory';
 import { Message, Contact } from '../types';
 import { P2PMessage } from '../types/p2pMessage';
+import IPFSService from './ipfsService';
 
 export interface Libp2pConfig {
   nodeId: string;
@@ -55,7 +49,7 @@ export class Libp2pMessagingService {
 
       // Create libp2p instance with optimized configuration
       this.libp2p = await createLibp2p({
-        peerId,
+        peerId: peerId,
         addresses: {
           listen: [
             '/ip4/0.0.0.0/tcp/0/ws',
@@ -78,12 +72,7 @@ export class Libp2pMessagingService {
           })
         ],
         connectionManager: {
-          maxConnections: this.maxConnections,
-          connectionCloseTimeout: this.config.connectionTimeout || 10000
-        },
-        dialer: {
-          maxDialsPerPeer: 1,
-          dialTimeout: 10000
+          maxConnections: this.maxConnections
         }
       });
 
