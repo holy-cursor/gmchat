@@ -10,7 +10,7 @@ import { webRTC } from '@libp2p/webrtc';
 import { mplex } from '@libp2p/mplex';
 import { noise } from '@libp2p/noise';
 import { bootstrap } from '@libp2p/bootstrap';
-import { createPeerId } from '@libp2p/peer-id-factory';
+import { createEd25519PeerId } from '@libp2p/peer-id-factory';
 import { Message, Contact } from '../types';
 import { P2PMessage } from '../types/p2pMessage';
 
@@ -50,7 +50,7 @@ export class Libp2pMessagingService {
 
     try {
       // Create peer ID
-      const peerId = await createPeerId();
+      const peerId = await createEd25519PeerId();
       console.log('🆔 libp2p: Peer ID created:', peerId.toString());
 
       // Create libp2p instance with optimized configuration
