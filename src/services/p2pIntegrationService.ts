@@ -264,18 +264,19 @@ export class P2PIntegrationService {
           const isConnected = hasNetworkConnection || hasDatabaseFallback || isP2PReady;
           const peerCount = stats.network?.connected || (isP2PReady ? 0 : 1); // Show 0 peers if P2P is ready but no connections
         
-        console.log('P2P Connection Status:', { 
-          hasNetworkConnection, 
-          hasDatabaseFallback, 
-          isConnected, 
-          peerCount,
-          networkStats: stats.network 
-        });
-        
-        return {
-          connected: isConnected,
-          peers: peerCount
-        };
+          console.log('P2P Connection Status:', { 
+            hasNetworkConnection, 
+            hasDatabaseFallback, 
+            isConnected, 
+            peerCount,
+            networkStats: stats.network 
+          });
+          
+          return {
+            connected: isConnected,
+            peers: peerCount
+          };
+        }
       } catch (error) {
         console.error('Error getting P2P connection status:', error);
         return { connected: true, peers: 1 }; // Database fallback is always available
