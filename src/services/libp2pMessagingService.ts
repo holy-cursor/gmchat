@@ -67,7 +67,7 @@ export class Libp2pMessagingService {
           webRTC()
         ],
         streamMuxers: [mplex()],
-        connectionEncryption: [noise()],
+        connectionEncrypters: [noise()],
         peerDiscovery: [
           bootstrap({
             list: [
