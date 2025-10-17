@@ -194,7 +194,7 @@ export class Libp2pMessagingService {
       };
 
       // Send message
-      const { stream } = await this.libp2p.dialProtocol(recipientPeer, '/gmchat/1.0.0');
+      const stream = await this.libp2p.dialProtocol(recipientPeer, '/gmchat/1.0.0');
       const writer = stream.getWriter();
       const messageData = new TextEncoder().encode(JSON.stringify(message));
       await writer.write(messageData);
@@ -236,7 +236,7 @@ export class Libp2pMessagingService {
     // Send to all connected peers
     for (const peer of peers) {
       try {
-        const { stream } = await this.libp2p.dialProtocol(peer, '/gmchat/1.0.0');
+        const stream = await this.libp2p.dialProtocol(peer, '/gmchat/1.0.0');
         const writer = stream.getWriter();
         await writer.write(messageData);
         await writer.close();
