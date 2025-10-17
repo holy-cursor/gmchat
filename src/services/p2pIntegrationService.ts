@@ -5,6 +5,7 @@
  */
 
 import { SimpleP2PService } from './simpleP2PService';
+import Libp2pMessagingService from './libp2pMessagingService';
 import { P2PMessage } from '../types/p2pMessage';
 import { Message } from '../types';
 
@@ -16,6 +17,7 @@ export interface P2PIntegrationConfig {
 
 export class P2PIntegrationService {
   private p2pService: SimpleP2PService | null = null;
+  private libp2pService: Libp2pMessagingService | null = null;
   private config: P2PIntegrationConfig;
   private isInitialized: boolean = false;
   private messageHandlers: Map<string, (message: Message) => void> = new Map();
@@ -35,7 +37,30 @@ export class P2PIntegrationService {
     try {
       console.log('Initializing P2P Integration Service...');
       
-        // Create Simple P2P service with wallet-specific node ID (singleton)
+      // Try libp2p first (better for cross-device messaging)
+      try {
+        console.log('🚀 Attempting libp2p initialization...');
+        const libp2pConfig = {
+          nodeId: `node_${this.config.walletAddress.slice(2, 10)}`,
+          enableP2P: true,
+          maxConnections: 5, // Limit connections to prevent performance issues
+          connectionTimeout: 10000
+        };
+
+        this.libp2pService = new Libp2pMessagingService(libp2pConfig);
+        await this.libp2pService.initialize();
+        
+        // Set up message handler
+        this.libp2pService.onMessage((p2pMessage) => {
+          this.handleIncomingP2PMessage(p2pMessage);
+        });
+        
+        console.log('✅ libp2p initialized successfully');
+        
+      } catch (libp2pError) {
+        console.warn('⚠️ libp2p failed, falling back to WebSocket P2P:', libp2pError);
+        
+        // Fallback to Simple P2P service
         const simpleP2PConfig = {
           nodeId: `node_${this.config.walletAddress.slice(2, 10)}`,
           relayUrl: process.env.NODE_ENV === 'production' ? 'wss://relay.damus.io' : 'ws://localhost:9001/ws',
@@ -43,14 +68,13 @@ export class P2PIntegrationService {
         };
 
         this.p2pService = SimpleP2PService.getInstance(simpleP2PConfig);
-      
-      // Initialize the P2P service asynchronously
-      await this.p2pService.initialize();
-      
-      // Register message handler for all threads
-      this.p2pService.registerMessageHandler('*', (p2pMessage: P2PMessage) => {
-        this.handleIncomingP2PMessage(p2pMessage);
-      });
+        await this.p2pService.initialize();
+        
+        // Register message handler for all threads
+        this.p2pService.registerMessageHandler('*', (p2pMessage: P2PMessage) => {
+          this.handleIncomingP2PMessage(p2pMessage);
+        });
+      }
 
       this.isInitialized = true;
       console.log('P2P Integration Service initialized successfully');
@@ -83,7 +107,7 @@ export class P2PIntegrationService {
       isInitialized: this.isInitialized
     });
 
-    if (!this.p2pService || !this.isInitialized) {
+    if ((!this.p2pService && !this.libp2pService) || !this.isInitialized) {
       console.warn('P2P service not available, falling back to database');
       // Fallback to database or throw error
       throw new Error('P2P service not initialized - using database fallback');
@@ -92,14 +116,23 @@ export class P2PIntegrationService {
     try {
       const actualThreadId = threadId || `thread_${this.config.walletAddress}_${recipient}`;
       
-      console.log('P2P Integration: Calling p2pService.sendMessage', { actualThreadId, recipient });
+      console.log('P2P Integration: Calling P2P service sendMessage', { actualThreadId, recipient });
       
-      const messageId = await this.p2pService.sendMessage(
-        actualThreadId,
-        recipient,
-        content,
-        'text'
-      );
+      let messageId: string;
+      
+      // Use libp2p if available, otherwise fallback to WebSocket P2P
+      if (this.libp2pService) {
+        messageId = await this.libp2pService.sendMessage(recipient, content, 'text');
+      } else if (this.p2pService) {
+        messageId = await this.p2pService.sendMessage(
+          actualThreadId,
+          recipient,
+          content,
+          'text'
+        );
+      } else {
+        throw new Error('No P2P service available');
+      }
 
       console.log(`✅ P2P message sent successfully: ${messageId}`);
       return messageId;
@@ -206,18 +239,30 @@ export class P2PIntegrationService {
    * Get connection status
    */
   getConnectionStatus(): { connected: boolean; peers: number } {
-    if (this.p2pService && this.isInitialized) {
+    if ((this.p2pService || this.libp2pService) && this.isInitialized) {
       try {
-        const stats = this.p2pService.getStats();
-        console.log('P2P Stats:', stats);
+        // Check libp2p first
+        if (this.libp2pService) {
+          const status = this.libp2pService.getConnectionStatus();
+          console.log('libp2p Status:', status);
+          return {
+            connected: status.connected,
+            peers: status.peerCount
+          };
+        }
         
-        // Consider connected if we have any network activity or database fallback
-        const hasNetworkConnection = stats.network?.connected > 0;
-        const hasDatabaseFallback = true; // Database is always available
-        const isP2PReady = this.p2pService.isReady(); // Check if libp2p is initialized
-        
-        const isConnected = hasNetworkConnection || hasDatabaseFallback || isP2PReady;
-        const peerCount = stats.network?.connected || (isP2PReady ? 0 : 1); // Show 0 peers if P2P is ready but no connections
+        // Fallback to WebSocket P2P
+        if (this.p2pService) {
+          const stats = this.p2pService.getStats();
+          console.log('P2P Stats:', stats);
+          
+          // Consider connected if we have any network activity or database fallback
+          const hasNetworkConnection = stats.network?.connected > 0;
+          const hasDatabaseFallback = true; // Database is always available
+          const isP2PReady = this.p2pService.isReady(); // Check if libp2p is initialized
+          
+          const isConnected = hasNetworkConnection || hasDatabaseFallback || isP2PReady;
+          const peerCount = stats.network?.connected || (isP2PReady ? 0 : 1); // Show 0 peers if P2P is ready but no connections
         
         console.log('P2P Connection Status:', { 
           hasNetworkConnection, 
