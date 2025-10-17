@@ -53,17 +53,16 @@ export class Libp2pMessagingService {
       const peerId = await createEd25519PeerId();
       console.log('🆔 libp2p: Peer ID created:', peerId.toString());
 
-      // Create libp2p instance with optimized configuration
+      // Create libp2p instance with browser-optimized configuration
       this.libp2p = await createLibp2p({
         addresses: {
           listen: [
-            '/ip4/0.0.0.0/tcp/0/ws',
-            '/webrtc'
+            '/webrtc' // WebRTC is the primary transport for browsers
           ]
         },
         transports: [
-          webSockets(),
-          webRTC()
+          webRTC(),
+          webSockets() // WebSocket for connecting to other nodes
         ],
         streamMuxers: [mplex()],
         connectionEncrypters: [noise()],

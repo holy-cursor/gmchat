@@ -59,11 +59,16 @@ export class P2PIntegrationService {
         
       } catch (libp2pError) {
         console.warn('⚠️ libp2p failed, falling back to WebSocket P2P:', libp2pError);
+        console.error('❌ libp2p Error details:', {
+          message: libp2pError instanceof Error ? libp2pError.message : 'Unknown error',
+          stack: libp2pError instanceof Error ? libp2pError.stack : undefined,
+          name: libp2pError instanceof Error ? libp2pError.name : 'Unknown'
+        });
         
         // Fallback to Simple P2P service
         const simpleP2PConfig = {
           nodeId: `node_${this.config.walletAddress.slice(2, 10)}`,
-          relayUrl: process.env.NODE_ENV === 'production' ? 'wss://relay.damus.io' : 'ws://localhost:9001/ws',
+          relayUrl: 'wss://relay.damus.io', // Use public relay in production
           enableP2P: true
         };
 
