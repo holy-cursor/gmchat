@@ -240,7 +240,7 @@ export class SecureDatabaseService {
         throw new Error(`Database error: ${error.message}`);
       }
 
-      const contacts: Contact[] = (data || []).map(dbContact => ({
+      const contacts: Contact[] = (data || []).map((dbContact: any) => ({
         address: dbContact.contact_address,
         displayName: dbContact.display_name,
         customTag: dbContact.custom_tag,
