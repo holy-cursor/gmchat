@@ -77,6 +77,14 @@ const BaseMiniAppConversationView: React.FC<BaseMiniAppConversationViewProps> = 
   console.log('BaseMiniAppConversationView - conversation:', conversation);
   console.log('BaseMiniAppConversationView - messages:', conversation?.messages);
   console.log('BaseMiniAppConversationView - messages length:', conversation?.messages?.length);
+  
+  // Debug component lifecycle
+  useEffect(() => {
+    console.log('🔄 BaseMiniAppConversationView mounted/updated');
+    return () => {
+      console.log('❌ BaseMiniAppConversationView unmounting');
+    };
+  });
 
   if (!conversation) {
     return (
@@ -287,7 +295,10 @@ const BaseMiniAppConversationView: React.FC<BaseMiniAppConversationViewProps> = 
             <input
               type="text"
               value={messageInput}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMessageInput(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                console.log('📝 Input changed:', e.target.value);
+                setMessageInput(e.target.value);
+              }}
               onKeyPress={handleKeyPress}
               placeholder="Type a message..."
               disabled={isSending}

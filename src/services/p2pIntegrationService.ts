@@ -6,6 +6,7 @@
 
 import { SimpleP2PService } from './simpleP2PService';
 import { Libp2pMessagingService } from './libp2pMessagingService';
+import { EnhancedP2PService } from './enhancedP2PService';
 import { P2PMessage } from '../types/p2pMessage';
 import { Message } from '../types';
 
@@ -18,6 +19,7 @@ export interface P2PIntegrationConfig {
 export class P2PIntegrationService {
   private p2pService: SimpleP2PService | null = null;
   private libp2pService: Libp2pMessagingService | null = null;
+  private enhancedP2PService: EnhancedP2PService | null = null;
   private config: P2PIntegrationConfig;
   private isInitialized: boolean = false;
   private messageHandlers: Map<string, (message: Message) => void> = new Map();
@@ -37,48 +39,79 @@ export class P2PIntegrationService {
     try {
       console.log('Initializing P2P Integration Service...');
       
-      // Try libp2p first (better for cross-device messaging)
+      // Try enhanced P2P first (now fixed without WebSockets)
       try {
-        console.log('🚀 Attempting libp2p initialization...');
-        const libp2pConfig = {
+        console.log('🚀 Attempting enhanced P2P initialization...');
+        const enhancedConfig = {
           nodeId: `node_${this.config.walletAddress.slice(2, 10)}`,
           enableP2P: true,
-          maxConnections: 5, // Limit connections to prevent performance issues
-          connectionTimeout: 10000
+          enableGossipSub: true,
+          enableWebRTC: true,
+          enableWebTransport: true,
+          enableCircuitRelay: true,
+          enableIpfs: true,
+          maxConnections: 5,
+          signalingServerUrl: process.env.NODE_ENV === 'production' 
+            ? 'wss://gmchat-signaling.railway.app' // Production signaling server
+            : 'ws://localhost:9002' // Local development
         };
 
-        this.libp2pService = new Libp2pMessagingService(libp2pConfig);
-        await this.libp2pService.initialize();
+        this.enhancedP2PService = new EnhancedP2PService(enhancedConfig);
+        await this.enhancedP2PService.initialize();
         
         // Set up message handler
-        this.libp2pService.onMessage((p2pMessage) => {
+        this.enhancedP2PService.onMessage((p2pMessage) => {
           this.handleIncomingP2PMessage(p2pMessage);
         });
         
-        console.log('✅ libp2p initialized successfully');
+        console.log('✅ Enhanced P2P initialized successfully');
         
-      } catch (libp2pError) {
-        console.warn('⚠️ libp2p failed, falling back to WebSocket P2P:', libp2pError);
-        console.error('❌ libp2p Error details:', {
-          message: libp2pError instanceof Error ? libp2pError.message : 'Unknown error',
-          stack: libp2pError instanceof Error ? libp2pError.stack : undefined,
-          name: libp2pError instanceof Error ? libp2pError.name : 'Unknown'
-        });
+      } catch (enhancedError) {
+        console.warn('⚠️ Enhanced P2P failed, trying libp2p:', enhancedError);
         
-        // Fallback to Simple P2P service
-        const simpleP2PConfig = {
-          nodeId: `node_${this.config.walletAddress.slice(2, 10)}`,
-          relayUrl: 'wss://relay.damus.io', // Use public relay in production
-          enableP2P: true
-        };
+        // Try libp2p as fallback
+        try {
+          console.log('🚀 Attempting libp2p initialization...');
+          const libp2pConfig = {
+            nodeId: `node_${this.config.walletAddress.slice(2, 10)}`,
+            enableP2P: true,
+            maxConnections: 5,
+            connectionTimeout: 10000
+          };
 
-        this.p2pService = SimpleP2PService.getInstance(simpleP2PConfig);
-        await this.p2pService.initialize();
+          this.libp2pService = new Libp2pMessagingService(libp2pConfig);
+          await this.libp2pService.initialize();
+          
+          // Set up message handler
+          this.libp2pService.onMessage((p2pMessage) => {
+            this.handleIncomingP2PMessage(p2pMessage);
+          });
+          
+          console.log('✅ libp2p initialized successfully');
         
-        // Register message handler for all threads
-        this.p2pService.registerMessageHandler('*', (p2pMessage: P2PMessage) => {
-          this.handleIncomingP2PMessage(p2pMessage);
-        });
+        } catch (libp2pError) {
+          console.warn('⚠️ libp2p failed, falling back to WebSocket P2P:', libp2pError);
+          console.error('❌ libp2p Error details:', {
+            message: libp2pError instanceof Error ? libp2pError.message : 'Unknown error',
+            stack: libp2pError instanceof Error ? libp2pError.stack : undefined,
+            name: libp2pError instanceof Error ? libp2pError.name : 'Unknown'
+          });
+          
+          // Fallback to Simple P2P service
+          const simpleP2PConfig = {
+            nodeId: `node_${this.config.walletAddress.slice(2, 10)}`,
+            relayUrl: 'wss://relay.damus.io', // Use public relay in production
+            enableP2P: true
+          };
+
+          this.p2pService = SimpleP2PService.getInstance(simpleP2PConfig);
+          await this.p2pService.initialize();
+          
+          // Register message handler for all threads
+          this.p2pService.registerMessageHandler('*', (p2pMessage: P2PMessage) => {
+            this.handleIncomingP2PMessage(p2pMessage);
+          });
+        }
       }
 
       this.isInitialized = true;
@@ -112,7 +145,7 @@ export class P2PIntegrationService {
       isInitialized: this.isInitialized
     });
 
-    if ((!this.p2pService && !this.libp2pService) || !this.isInitialized) {
+    if ((!this.p2pService && !this.libp2pService && !this.enhancedP2PService) || !this.isInitialized) {
       console.warn('P2P service not available, falling back to database');
       // Fallback to database or throw error
       throw new Error('P2P service not initialized - using database fallback');
@@ -125,16 +158,28 @@ export class P2PIntegrationService {
       
       let messageId: string;
       
-      // Use libp2p if available, otherwise fallback to WebSocket P2P
-      if (this.libp2pService) {
+      // Try enhanced P2P first (GossipSub + WebRTC + WebTransport + IPFS)
+      if (this.enhancedP2PService) {
+        console.log('🚀 P2P: Using enhanced P2P with GossipSub + IPFS for message delivery');
+        messageId = await this.enhancedP2PService.sendMessage(recipient, content, 'text');
+      }
+      // Fallback to libp2p (it has circuit relay built-in)
+      else if (this.libp2pService) {
+        console.log('🔄 P2P: Using libp2p with circuit relay for message delivery');
         messageId = await this.libp2pService.sendMessage(recipient, content, 'text');
       } else if (this.p2pService) {
-        messageId = await this.p2pService.sendMessage(
-          actualThreadId,
-          recipient,
-          content,
-          'text'
-        );
+        // Fallback to WebSocket P2P only if libp2p is not available
+        if (this.p2pService.isReady()) {
+          messageId = await this.p2pService.sendMessage(
+            actualThreadId,
+            recipient,
+            content,
+            'text'
+          );
+        } else {
+          // WebSocket not connected and no libp2p - this shouldn't happen
+          throw new Error('No P2P connection available');
+        }
       } else {
         throw new Error('No P2P service available');
       }
@@ -152,6 +197,10 @@ export class P2PIntegrationService {
    */
   private handleIncomingP2PMessage(p2pMessage: P2PMessage): void {
     try {
+      console.log('📨 P2P Integration: Received P2P message:', p2pMessage.id, p2pMessage.content);
+      console.log('📨 P2P Integration: Thread ID:', p2pMessage.threadId);
+      console.log('📨 P2P Integration: Available message handlers:', Array.from(this.messageHandlers.keys()));
+      
       // Convert P2P message to UI message format
       const uiMessage: Message = {
         id: p2pMessage.id,
@@ -175,16 +224,22 @@ export class P2PIntegrationService {
       const threadId = p2pMessage.threadId;
       const handler = this.messageHandlers.get(threadId);
       if (handler) {
+        console.log('📨 P2P Integration: Calling specific thread handler for:', threadId);
         handler(uiMessage);
+      } else {
+        console.log('📨 P2P Integration: No specific handler for thread:', threadId);
       }
 
       // Also notify global handler if exists
       const globalHandler = this.messageHandlers.get('*');
       if (globalHandler) {
+        console.log('📨 P2P Integration: Calling global handler');
         globalHandler(uiMessage);
+      } else {
+        console.log('📨 P2P Integration: No global handler found');
       }
 
-      console.log(`P2P message processed: ${p2pMessage.id}`);
+      console.log(`✅ P2P Integration: Message processed: ${p2pMessage.id}`);
     } catch (error) {
       console.error('Error handling incoming P2P message:', error);
     }
@@ -237,16 +292,36 @@ export class P2PIntegrationService {
    * Check if P2P is ready
    */
   isReady(): boolean {
-    return this.isInitialized && this.p2pService?.isReady() === true;
+    // Always prefer libp2p if available and initialized
+    if (this.libp2pService && this.isInitialized) {
+      return true;
+    }
+    
+    // Fallback to SimpleP2P if libp2p is not available
+    if (this.p2pService && this.isInitialized) {
+      return true;
+    }
+    
+    return false;
   }
 
   /**
    * Get connection status
    */
   getConnectionStatus(): { connected: boolean; peers: number } {
-    if ((this.p2pService || this.libp2pService) && this.isInitialized) {
+    if ((this.p2pService || this.libp2pService || this.enhancedP2PService) && this.isInitialized) {
       try {
-        // Check libp2p first
+        // Check enhanced P2P first
+        if (this.enhancedP2PService) {
+          const status = this.enhancedP2PService.getConnectionStatus();
+          console.log('Enhanced P2P Status:', status);
+          return {
+            connected: status.connected,
+            peers: status.peerCount
+          };
+        }
+        
+        // Check libp2p
         if (this.libp2pService) {
           const status = this.libp2pService.getConnectionStatus();
           console.log('libp2p Status:', status);
@@ -291,15 +366,6 @@ export class P2PIntegrationService {
     return { connected: true, peers: 1 };
   }
 
-  /**
-   * Connect to a specific peer
-   */
-  async connectToPeer(peerId: string): Promise<boolean> {
-    if (this.p2pService) {
-      return await this.p2pService.connectToPeer(peerId);
-    }
-    return false;
-  }
 
   /**
    * Store message in IPFS for offline access
@@ -372,9 +438,37 @@ export class P2PIntegrationService {
   }
 
   /**
+   * Get peer information for testing
+   */
+  getPeerInfo(): { peerId: string | null; connectedPeers: string[]; multiaddrs?: string[] } {
+    if (this.enhancedP2PService) {
+      return {
+        peerId: this.enhancedP2PService.getPeerId(),
+        connectedPeers: this.enhancedP2PService.getConnectedPeers(),
+        multiaddrs: [] // No multiaddrs needed for GossipSub + IPFS
+      };
+    }
+    if (this.libp2pService) {
+      return {
+        peerId: this.libp2pService.getPeerId(),
+        connectedPeers: this.libp2pService.getConnectedPeers()
+      };
+    }
+    return { peerId: null, connectedPeers: [] };
+  }
+
+  /**
+   * Manually connect to a peer (for testing)
+   */
+  // No direct peer connections - just use GossipSub + IPFS
+
+  /**
    * Clean up resources
    */
   cleanup(): void {
+    if (this.enhancedP2PService) {
+      this.enhancedP2PService.cleanup();
+    }
     if (this.p2pService) {
       this.p2pService.cleanup();
     }

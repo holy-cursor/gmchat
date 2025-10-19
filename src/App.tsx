@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { BaseMiniAppProvider } from './contexts/BaseMiniAppContext';
 import { useAccount } from 'wagmi';
@@ -45,6 +45,17 @@ function AppContent() {
   }, [evmAddress, evmConnected, evmChainId, selectedWalletType]);
 
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  
+  // Debug selectedContact changes
+  const prevSelectedContact = useRef<Contact | null>(null);
+  useEffect(() => {
+    console.log('🔍 selectedContact changed:', selectedContact);
+    if (selectedContact === null && prevSelectedContact.current !== null) {
+      console.log('❌ selectedContact was set to null - conversation will disappear');
+      console.trace('Stack trace for selectedContact = null');
+    }
+    prevSelectedContact.current = selectedContact;
+  }, [selectedContact]);
   const [useHybridMode, setUseHybridMode] = useState(true); // Enable hybrid mode by default for cross-device sync
   const [ultraLowCostMode, setUltraLowCostMode] = useState(false); // Database-only mode (no blockchain)
   const [isAuthenticated, setIsAuthenticated] = useState(false); // Authentication state
@@ -52,6 +63,7 @@ function AppContent() {
   const [useP2PMode, setUseP2PMode] = useState(true); // Enable P2P mode by default
   const [p2pService, setP2PService] = useState<P2PIntegrationService | null>(null);
   const [p2pConnected, setP2PConnected] = useState(false);
+  // No peer connection UI needed - just use GossipSub + IPFS
   
   // Modal state
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
@@ -177,7 +189,62 @@ function AppContent() {
       const unread = storedContacts.reduce((sum, contact) => sum + (contact.unreadCount || 0), 0);
       setTotalUnreadCount(unread);
     }
-  }, [evmAddress, selectedContact, useHybridMode, useSecureMode, isAuthenticated]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evmAddress, useHybridMode, useSecureMode, isAuthenticated]); // Remove selectedContact to prevent circular dependency
+
+  // Update current conversation without affecting contacts
+  const updateCurrentConversation = useCallback(async (): Promise<void> => {
+    if (!evmAddress || !selectedContact) return;
+
+    try {
+      let updatedConversation = MessageStorageService.getConversation(evmAddress, selectedContact.address);
+      
+      // If using hybrid mode, also fetch messages from database
+      if (useHybridMode) {
+        try {
+          const dbMessages = await HybridDatabaseService.getMessages(evmAddress, selectedContact.address);
+          console.log('Fetched messages from database:', dbMessages.length);
+          
+          // Merge with local messages
+          const localMessages = MessageStorageService.getConversation(evmAddress, selectedContact.address)?.messages || [];
+          const allMessages = [...localMessages, ...dbMessages];
+          
+          // Remove duplicates and sort by timestamp
+          const uniqueMessages = allMessages.filter((message, index, self) => 
+            index === self.findIndex(m => 
+              m.id === message.id || 
+              (m.transactionSignature === message.transactionSignature && m.transactionSignature)
+            )
+          ).sort((a, b) => a.timestamp - b.timestamp);
+          
+          // Create conversation with merged messages (don't store them again)
+          if (uniqueMessages.length > 0) {
+            const contact: Contact = {
+              address: selectedContact.address,
+              displayName: selectedContact.displayName,
+              lastMessage: uniqueMessages[uniqueMessages.length - 1],
+              unreadCount: uniqueMessages.filter(m => 
+                m.recipient === evmAddress && !m.isRead
+              ).length,
+              lastActivity: Math.max(...uniqueMessages.map(m => m.timestamp)),
+            };
+
+            updatedConversation = {
+              contact,
+              messages: uniqueMessages,
+              totalMessages: uniqueMessages.length,
+            };
+          }
+        } catch (dbError) {
+          console.warn('Failed to fetch messages from database:', dbError);
+        }
+      }
+      
+      setCurrentConversation(updatedConversation);
+    } catch (error) {
+      console.error('Failed to update current conversation:', error);
+    }
+  }, [evmAddress, selectedContact, useHybridMode]);
 
   // Authenticate user when wallet connects
   const authenticateUser = useCallback(async (): Promise<void> => {
@@ -291,7 +358,8 @@ function AppContent() {
       console.error('Failed to initialize P2P service:', error);
       toast.error('P2P service initialization failed, falling back to on-chain messaging');
     }
-  }, [evmAddress, loadContacts, selectedContact]); // Include missing dependencies
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evmAddress, loadContacts]); // Remove selectedContact to prevent circular dependency
 
   // Cleanup P2P service
   const cleanupP2PService = useCallback(() => {
@@ -304,6 +372,7 @@ function AppContent() {
   }, [p2pService]); // Include p2pService dependency
 
   // Initialize P2P service when wallet connects
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     console.log('🔍 P2P useEffect triggered:', { evmAddress, useP2PMode, p2pService: !!p2pService });
     
@@ -319,7 +388,8 @@ function AppContent() {
       console.log('🧹 Cleaning up P2P service...');
       cleanupP2PService();
     }
-  }, [evmAddress, useP2PMode, p2pService, initializeP2PService, cleanupP2PService]); // Include all dependencies
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evmAddress, useP2PMode, initializeP2PService, cleanupP2PService]); // Remove p2pService to prevent circular dependency
 
   // Real-time sync with hybrid database
   useEffect(() => {
@@ -330,16 +400,23 @@ function AppContent() {
     const subscription = HybridDatabaseService.subscribeToMessages(evmAddress, (message) => {
       console.log('Real-time message received:', message);
       
-      // Store message locally
-      MessageStorageService.storeMessage(message);
+      // Only store message locally if it's from someone else (not sent by current user)
+      if (message.sender !== evmAddress) {
+        MessageStorageService.storeMessage(message);
+      } else {
+        console.log('Ignoring own message in real-time sync to prevent duplicates');
+        return; // Skip the rest of the processing for own messages
+      }
       
       // Reload contacts to update UI
       loadContacts();
       
       // Update current conversation if we're viewing the sender
-      if (selectedContact && 
-          (message.sender === selectedContact.address || message.recipient === selectedContact.address)) {
-        const updatedConversation = MessageStorageService.getConversation(evmAddress, selectedContact.address);
+      // Use a ref to get the current selectedContact value
+      const currentSelectedContact = selectedContact;
+      if (currentSelectedContact && 
+          (message.sender === currentSelectedContact.address || message.recipient === currentSelectedContact.address)) {
+        const updatedConversation = MessageStorageService.getConversation(evmAddress, currentSelectedContact.address);
         setCurrentConversation(updatedConversation);
       }
       
@@ -361,7 +438,8 @@ function AppContent() {
       subscription.unsubscribe();
       clearInterval(periodicSync);
     };
-  }, [evmAddress, useHybridMode, selectedContact, loadContacts]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evmAddress, useHybridMode]); // Remove selectedContact and loadContacts to prevent unnecessary re-runs
 
   // Clean up duplicate messages in localStorage
   const cleanupDuplicateMessages = useCallback((): void => {
@@ -439,8 +517,8 @@ function AppContent() {
       return;
     }
 
-    // Try P2P messaging first if available (regardless of p2pConnected state)
-    if (useP2PMode && p2pService && p2pService.isReady()) {
+    // Try P2P messaging first if available (prioritize enhanced P2P)
+    if (useP2PMode && p2pService) {
       try {
         const connectionStatus = p2pService.getConnectionStatus();
         console.log('🚀 Attempting P2P messaging...', { 
@@ -450,8 +528,10 @@ function AppContent() {
           connectionStatus,
           p2pServiceReady: p2pService.isReady()
         });
+        
+        // Use P2P service for messaging (GossipSub + IPFS)
         const messageId = await p2pService.sendMessage(recipient, content);
-        console.log('✅ P2P message sent successfully:', messageId);
+        console.log('✅ P2P message sent successfully via GossipSub + IPFS:', messageId);
         
         // Store message locally for UI consistency
         const messageToStore = {
@@ -469,13 +549,20 @@ function AppContent() {
         MessageStorageService.storeMessage(messageToStore);
         
         // Update UI
+        console.log('🔄 Reloading contacts after P2P message...');
         await loadContacts();
+        
+        console.log('🔍 After P2P message - selectedContact:', selectedContact);
+        console.log('🔍 After P2P message - recipient:', recipient);
+        
         if (selectedContact && selectedContact.address === recipient) {
-          const updatedConversation = MessageStorageService.getConversation(evmAddress, recipient);
-          setCurrentConversation(updatedConversation);
+          // Update conversation without affecting contacts
+          await updateCurrentConversation();
+        } else {
+          console.log('❌ Selected contact does not match recipient after P2P message');
         }
         
-        toast.success('P2P message sent successfully!');
+        toast.success('Message sent via GossipSub + IPFS!');
         return;
       } catch (p2pError) {
         console.warn('❌ P2P messaging failed, falling back to on-chain:', p2pError);
@@ -633,7 +720,7 @@ function AppContent() {
       toast.error(`Failed to send message: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw error; // Re-throw to be caught by handleCaptchaVerify
     }
-  }, [evmConnected, evmAddress, evmChainId, selectedWalletType, loadContacts, selectedContact, useHybridMode, ultraLowCostMode, useSecureMode, isAuthenticated, p2pConnected, p2pService, useP2PMode]);
+  }, [evmConnected, evmAddress, evmChainId, selectedWalletType, loadContacts, selectedContact, useHybridMode, ultraLowCostMode, useSecureMode, isAuthenticated, p2pConnected, p2pService, useP2PMode, updateCurrentConversation]);
 
   const handleSendMessage = useCallback(async (content?: string, recipient?: string): Promise<void> => {
     const currentWalletAddress = evmAddress;
@@ -706,6 +793,9 @@ function AppContent() {
     const { content, recipient } = pendingMessage;
     setPendingMessage(null);
     setIsCaptchaModalOpen(false);
+    
+    console.log('🔍 After captcha close - selectedContact:', selectedContact);
+    console.log('🔍 After captcha close - currentConversation:', currentConversation);
 
     console.log('🚀 Starting message send process...', { content, recipient, chainId: evmChainId || 8453 });
     setIsSending(true);
@@ -997,9 +1087,9 @@ function AppContent() {
 
     if (conversation) {
       MessageStorageService.markConversationAsRead(currentWalletAddress, contact.address);
-      loadContacts();
+      // Don't call loadContacts here to avoid circular dependency
     }
-  }, [evmAddress, loadContacts]);
+  }, [evmAddress]);
 
 
 
@@ -1040,8 +1130,8 @@ function AppContent() {
       if (selectedContact) {
         await handleSendMessage(content, selectedContact.address);
 
-        const updatedConversation = MessageStorageService.getConversation(currentWalletAddress, selectedContact.address);
-        setCurrentConversation(updatedConversation);
+        // Update conversation without affecting contacts
+        await updateCurrentConversation();
       }
 
       await loadContacts();
@@ -1051,7 +1141,7 @@ function AppContent() {
     } finally {
       setIsSending(false);
     }
-  }, [selectedContact, evmAddress, loadContacts, handleSendMessage]);
+  }, [selectedContact, evmAddress, loadContacts, handleSendMessage, updateCurrentConversation]);
 
 
   return (
@@ -1121,6 +1211,24 @@ function AppContent() {
             }`}>
               <span className="text-yellow-500">⚠️</span>
               <span className="truncate">P2P Initializing: Setting up peer-to-peer network...</span>
+            </div>
+          )}
+
+          {/* P2P Peer Info for Testing */}
+          {useP2PMode && (
+            <div className={`flex flex-col space-y-2 px-3 py-2 rounded-lg text-xs ${
+              isDark
+                ? 'bg-blue-900/20 text-blue-300 border border-blue-800/30'
+                : 'bg-blue-50 text-blue-700 border border-blue-200'
+            }`}>
+              <div className="flex items-center space-x-2">
+                <span className="text-blue-500">🌐</span>
+                <span className="font-medium">P2P Mode:</span>
+                <span className="text-xs">GossipSub + IPFS</span>
+              </div>
+              <div className="text-xs opacity-75">
+                Decentralized messaging with IPFS storage
+              </div>
             </div>
           )}
           
