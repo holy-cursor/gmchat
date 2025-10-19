@@ -1,0 +1,12 @@
+# Ignore React app files for signaling server deployment
+src/
+public/
+build/
+node_modules/
+package-lock.json
+yarn.lock
+
+# Keep only signaling server files
+!signaling-server-clean.js
+!package-signaling-clean.json
+!railway.json
