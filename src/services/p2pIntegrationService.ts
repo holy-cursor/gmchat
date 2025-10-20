@@ -60,9 +60,12 @@ export class P2PIntegrationService {
         await this.enhancedP2PService.initialize();
         
         // Set up message handler
+        console.log('🔗 P2P Integration: Setting up message handler...');
         this.enhancedP2PService.onMessage((p2pMessage) => {
+          console.log('📨 P2P Integration: Received message from enhanced P2P:', p2pMessage);
           this.handleIncomingP2PMessage(p2pMessage);
         });
+        console.log('✅ P2P Integration: Message handler registered');
         
         console.log('✅ Enhanced P2P initialized successfully');
         
