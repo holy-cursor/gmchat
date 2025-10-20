@@ -550,7 +550,9 @@ export class EnhancedP2PService {
   }
 
   onMessage(handler: (message: P2PMessage) => void): void {
+    console.log('🔗 Enhanced P2P: Registering message handler...');
     this.messageHandlers.push(handler);
+    console.log('✅ Enhanced P2P: Message handler registered. Total handlers:', this.messageHandlers.length);
   }
 
   getConnectionStatus(): { connected: boolean; peerCount: number; maxConnections: number } {
