@@ -51,9 +51,9 @@ export class P2PIntegrationService {
           enableCircuitRelay: true,
           enableIpfs: true,
           maxConnections: 5,
-          signalingServerUrl: process.env.NODE_ENV === 'production' 
-            ? 'wss://gmchat-signaling.railway.app' // Production signaling server
-            : 'ws://localhost:9002' // Local development
+        signalingServerUrl: process.env.NODE_ENV === 'production' 
+          ? 'wss://gmchat-signaling-server-production.up.railway.app' // Production signaling server
+          : 'ws://localhost:9002' // Local development
         };
 
         this.enhancedP2PService = new EnhancedP2PService(enhancedConfig);
