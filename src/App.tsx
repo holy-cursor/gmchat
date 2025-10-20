@@ -312,9 +312,7 @@ function AppContent() {
         fallbackToOnChain: true
       });
 
-      await service.initialize();
-      
-      // Register message handler for real-time updates
+      // Register message handler BEFORE initialization to catch test messages
       service.registerMessageHandler('*', (message: Message) => {
         console.log('P2P message received:', message);
         
@@ -330,6 +328,8 @@ function AppContent() {
         
         toast.success('New P2P message received!');
       });
+
+      await service.initialize();
 
       setP2PService(service);
       
