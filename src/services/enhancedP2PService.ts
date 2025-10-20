@@ -85,7 +85,10 @@ export class EnhancedP2PService {
 
       // Initialize signaling service for peer discovery
       if (this.config.signalingServerUrl) {
+        console.log('🔗 Enhanced P2P: Signaling server URL provided, initializing...');
         await this.initializeSignaling();
+      } else {
+        console.log('⚠️ Enhanced P2P: No signaling server URL provided, skipping signaling');
       }
 
       // Create libp2p instance with enhanced configuration
@@ -163,6 +166,9 @@ export class EnhancedP2PService {
 
   private async initializeSignaling(): Promise<void> {
     try {
+      console.log('🔗 Enhanced P2P: Initializing signaling service...');
+      console.log('🔗 Enhanced P2P: Signaling URL:', this.config.signalingServerUrl);
+      
       this.signalingService = new WebRTCSignalingService({
         signalingServerUrl: this.config.signalingServerUrl!,
         roomId: 'gmchat',
@@ -174,6 +180,7 @@ export class EnhancedP2PService {
         this.handleSignalingMessage(message);
       });
 
+      console.log('🔗 Enhanced P2P: Attempting to connect to signaling server...');
       await this.signalingService.connect();
       console.log('✅ Enhanced P2P: Signaling service initialized');
 

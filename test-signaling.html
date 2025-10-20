@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Signaling Server</title>
+</head>
+<body>
+    <h1>GMChat Signaling Server Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="logs"></div>
+
+    <script>
+        const status = document.getElementById('status');
+        const logs = document.getElementById('logs');
+        
+        function log(message) {
+            console.log(message);
+            logs.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+        }
+        
+        const wsUrl = 'wss://gmchat-signaling-server-production.up.railway.app/ws?room=test&peer=test-peer-' + Date.now();
+        log('Connecting to: ' + wsUrl);
+        
+        const ws = new WebSocket(wsUrl);
+        
+        ws.onopen = function() {
+            status.textContent = '✅ Connected!';
+            status.style.color = 'green';
+            log('✅ WebSocket connected successfully');
+        };
+        
+        ws.onmessage = function(event) {
+            log('📨 Received: ' + event.data);
+        };
+        
+        ws.onclose = function(event) {
+            status.textContent = '❌ Disconnected';
+            status.style.color = 'red';
+            log('❌ WebSocket closed: ' + event.code + ' ' + event.reason);
+        };
+        
+        ws.onerror = function(error) {
+            status.textContent = '❌ Error';
+            status.style.color = 'red';
+            log('❌ WebSocket error: ' + error);
+        };
+    </script>
+</body>
+</html>
