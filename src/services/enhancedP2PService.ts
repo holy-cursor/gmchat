@@ -16,6 +16,7 @@ import { identify } from '@libp2p/identify';
 import { circuitRelayTransport } from '@libp2p/circuit-relay-v2';
 import { createEd25519PeerId } from '@libp2p/peer-id-factory';
 import { gossipsub } from '@libp2p/gossipsub';
+import { floodsub } from '@libp2p/floodsub';
 // import { bootstrap } from '@libp2p/bootstrap'; // Not used - we use signaling server for discovery
 // import { pipe } from 'it-pipe'; // Not used
 // import map from 'it-map'; // Not used
@@ -29,7 +30,7 @@ export interface EnhancedP2PConfig {
   nodeId: string;
   enableP2P: boolean;
   maxConnections?: number;
-  enableGossipSub?: boolean;
+  enableFloodsub?: boolean;
   enableIPFS?: boolean;
   enableWebRTC?: boolean;
   enableWebTransport?: boolean;
@@ -45,7 +46,7 @@ export class EnhancedP2PService {
   private messageHandlers: ((message: P2PMessage) => void)[] = [];
   private connectionCount = 0;
   private maxConnections = 10;
-  private gossipSub: any = null;
+  private pubsub: any = null;
 
   // IPFS integration
   private ipfsService: any = null;
@@ -57,7 +58,7 @@ export class EnhancedP2PService {
   constructor(config: EnhancedP2PConfig) {
     this.config = {
       maxConnections: 10,
-      enableGossipSub: true,
+      enableFloodsub: true,
       enableIPFS: true,
       ...config
     };
@@ -71,7 +72,7 @@ export class EnhancedP2PService {
     }
 
     this.isInitializing = true;
-    console.log('🚀 Enhanced P2P: Initializing with GossipSub + WebRTC + WebTransport...');
+    console.log('🚀 Enhanced P2P: Initializing with Floodsub + WebRTC + WebTransport...');
 
     try {
       // Create peer ID
@@ -107,12 +108,8 @@ export class EnhancedP2PService {
         connectionEncrypters: [noise()],
         services: {
           identify: identify(),
-          ...(this.config.enableGossipSub && {
-            pubsub: gossipsub({
-              allowPublishToZeroTopicPeers: true,
-              emitSelf: false,
-              messageProcessingConcurrency: 10
-            })
+          ...(this.config.enableFloodsub && {
+            pubsub: floodsub()
           })
         },
         peerDiscovery: [
@@ -131,9 +128,9 @@ export class EnhancedP2PService {
       console.log('✅ Enhanced P2P: Started successfully');
       console.log('📡 Enhanced P2P: Listening on:', this.libp2p.getMultiaddrs().map(addr => addr.toString()));
 
-      // Initialize GossipSub if enabled
-      if (this.config.enableGossipSub) {
-        await this.initializeGossipSub();
+      // Initialize Floodsub if enabled
+      if (this.config.enableFloodsub) {
+        await this.initializeFloodsub();
       }
 
       // Announce our peer to the signaling server now that libp2p is ready
@@ -297,18 +294,18 @@ export class EnhancedP2PService {
         console.warn('⚠️ Enhanced P2P: Error connecting to discovered peer:', error);
       }
     } else {
-      console.log('📡 Enhanced P2P: Using GossipSub for message delivery (no direct connection needed)');
+      console.log('📡 Enhanced P2P: Using Floodsub for message delivery (no direct connection needed)');
     }
   }
 
-  private async initializeGossipSub(): Promise<void> {
+  private async initializeFloodsub(): Promise<void> {
     if (!this.libp2p) return;
 
     try {
-      this.gossipSub = this.libp2p.services.pubsub;
+      this.pubsub = this.libp2p.services.pubsub;
       
       // Subscribe to the main messaging topic
-      await this.gossipSub.subscribe('gmchat-messages');
+      await this.pubsub.subscribe('gmchat-messages');
       console.log('📡 Enhanced P2P: Subscribed to gmchat-messages topic');
       
       // Wait for subscription to propagate (as recommended by libp2p community)
@@ -316,12 +313,12 @@ export class EnhancedP2PService {
       await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
       console.log('✅ Enhanced P2P: Subscription propagation delay complete');
       
-      // Set up message handler using the correct GossipSub API
-      console.log('🔧 Enhanced P2P: Setting up GossipSub event listeners...');
+      // Set up message handler using the correct Floodsub API
+      console.log('🔧 Enhanced P2P: Setting up Floodsub event listeners...');
       
-        // Use the working floodsub event listener approach with GossipSub
+        // Use the working floodsub event listener approach
         const setupMessageListener = () => {
-          console.log('🔧 Enhanced P2P: Setting up event listeners using working floodsub approach...');
+          console.log('🔧 Enhanced P2P: Setting up event listeners using floodsub approach...');
           
           // Use the exact same approach as the working floodsub example
           if (this.libp2p && this.libp2p.services && this.libp2p.services.pubsub) {
@@ -330,7 +327,7 @@ export class EnhancedP2PService {
             pubsub.addEventListener("message", (evt: any) => {
               console.log('📨 Enhanced P2P: Message received on topic:', evt.detail.topic);
               console.log('📨 Enhanced P2P: Raw data:', uint8ArrayToString(evt.detail.data));
-              this.handleGossipSubMessage(evt);
+              this.handleFloodsubMessage(evt);
             });
             console.log('✅ Enhanced P2P: Event listener set up successfully');
           } else {
@@ -353,15 +350,15 @@ export class EnhancedP2PService {
           topic: 'gmchat-messages'
         }
       };
-      this.handleGossipSubMessage(testEvent);
+      this.handleFloodsubMessage(testEvent);
 
-      console.log('✅ Enhanced P2P: GossipSub initialized and subscribed to gmchat-messages');
+      console.log('✅ Enhanced P2P: Floodsub initialized and subscribed to gmchat-messages');
     } catch (error) {
-      console.error('❌ Enhanced P2P: Failed to initialize GossipSub:', error);
+      console.error('❌ Enhanced P2P: Failed to initialize Floodsub:', error);
     }
   }
 
-  private handleGossipSubMessage(evt: any): void {
+  private handleFloodsubMessage(evt: any): void {
     try {
       console.log('📨 Enhanced P2P: Processing message using floodsub approach...');
       
@@ -476,18 +473,18 @@ export class EnhancedP2PService {
         signature: ''
       };
 
-            // Try GossipSub first (decentralized messaging)
-            if (this.gossipSub) {
+            // Try Floodsub first (simpler protocol for testing)
+            if (this.pubsub) {
               try {
-                console.log('📤 Enhanced P2P: Publishing message to GossipSub topic: gmchat-messages');
+                console.log('📤 Enhanced P2P: Publishing message to Floodsub topic: gmchat-messages');
                 console.log('📤 Enhanced P2P: Message data:', JSON.stringify(message));
                 
                 // Add a small delay to ensure network is ready
                 await new Promise(resolve => setTimeout(resolve, 100));
                 
                 const messageData = uint8ArrayFromString(JSON.stringify(message));
-                await this.gossipSub.publish('gmchat-messages', messageData);
-                console.log('✅ Enhanced P2P: Message sent via GossipSub:', message.id);
+                await this.pubsub.publish('gmchat-messages', messageData);
+                console.log('✅ Enhanced P2P: Message sent via Floodsub:', message.id);
                  
                  // Store in IPFS for persistence
                  if (this.ipfsService) {
@@ -495,8 +492,8 @@ export class EnhancedP2PService {
                  }
                  
                  return message.id;
-               } catch (gossipError) {
-                 console.warn('⚠️ Enhanced P2P: GossipSub failed, trying direct connection:', gossipError);
+               } catch (floodsubError) {
+                 console.warn('⚠️ Enhanced P2P: Floodsub failed, trying direct connection:', floodsubError);
                }
              }
 
@@ -601,7 +598,7 @@ export class EnhancedP2PService {
     this.isInitialized = false;
     this.connectionCount = 0;
     this.messageHandlers = [];
-    this.gossipSub = null;
+    this.pubsub = null;
   }
 }
 
