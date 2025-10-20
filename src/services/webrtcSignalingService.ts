@@ -38,6 +38,7 @@ export class WebRTCSignalingService {
       try {
         const wsUrl = `${this.config.signalingServerUrl}/ws?room=${this.config.roomId}&peer=${this.config.peerId}`;
         console.log('🔗 Signaling: Connecting to:', wsUrl);
+        console.log('🔗 Signaling: Base URL:', this.config.signalingServerUrl);
         
         this.ws = new WebSocket(wsUrl);
 
@@ -71,6 +72,11 @@ export class WebRTCSignalingService {
         this.ws.onerror = (error) => {
           clearTimeout(timeout);
           console.error('❌ Signaling: WebSocket error:', error);
+          console.error('❌ Signaling: Error details:', {
+            url: wsUrl,
+            readyState: this.ws?.readyState,
+            error: error
+          });
           reject(error);
         };
 
