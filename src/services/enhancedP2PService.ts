@@ -554,9 +554,22 @@ export class EnhancedP2PService {
   }
 
   getConnectionStatus(): { connected: boolean; peerCount: number; maxConnections: number } {
+    const discoveredPeerCount = this.discoveredPeers.size;
+    const libp2pPeerCount = this.libp2p ? this.libp2p.getConnections().length : 0;
+    
+    // For GossipSub, we count discovered peers (signaling) + libp2p connections
+    const totalPeerCount = discoveredPeerCount + libp2pPeerCount;
+    
+    console.log('📊 Enhanced P2P: Connection status:', {
+      discoveredPeers: discoveredPeerCount,
+      libp2pConnections: libp2pPeerCount,
+      totalPeers: totalPeerCount,
+      maxConnections: this.maxConnections
+    });
+    
     return {
       connected: this.isInitialized && this.libp2p !== null,
-      peerCount: this.connectionCount,
+      peerCount: totalPeerCount,
       maxConnections: this.maxConnections
     };
   }
