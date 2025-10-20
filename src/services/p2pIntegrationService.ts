@@ -204,6 +204,8 @@ export class P2PIntegrationService {
       console.log('📨 P2P Integration: Received P2P message:', p2pMessage.id, p2pMessage.content);
       console.log('📨 P2P Integration: Thread ID:', p2pMessage.threadId);
       console.log('📨 P2P Integration: Available message handlers:', Array.from(this.messageHandlers.keys()));
+      console.log('📨 P2P Integration: Message handlers map size:', this.messageHandlers.size);
+      console.log('📨 P2P Integration: Message handlers map contents:', this.messageHandlers);
       
       // Convert P2P message to UI message format
       const uiMessage: Message = {
@@ -253,7 +255,9 @@ export class P2PIntegrationService {
    * Register message handler for a thread
    */
   registerMessageHandler(threadId: string, handler: (message: Message) => void): void {
+    console.log('🔗 P2P Integration: Registering message handler for thread:', threadId);
     this.messageHandlers.set(threadId, handler);
+    console.log('✅ P2P Integration: Message handler registered. Total handlers:', this.messageHandlers.size);
   }
 
   /**
