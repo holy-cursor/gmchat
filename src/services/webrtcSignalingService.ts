@@ -107,10 +107,16 @@ export class WebRTCSignalingService {
         break;
 
       case 'peer-list':
-        console.log('📋 Signaling: Received peer list:', data.peers.length);
-        data.peers.forEach((peer: PeerInfo) => {
-          this.peers.set(peer.peerId, peer);
-        });
+      case 'peers-updated':
+        console.log('📋 Signaling: Received peer list:', data.peers?.length || 0);
+        console.log('📋 Signaling: Peer data:', data);
+        if (data.peers) {
+          data.peers.forEach((peer: PeerInfo) => {
+            console.log('📋 Signaling: Adding peer:', peer);
+            this.peers.set(peer.peerId, peer);
+          });
+        }
+        console.log('📋 Signaling: Total peers now:', this.peers.size);
         this.notifyHandlers({ type: 'peers-updated', peers: Array.from(this.peers.values()) });
         break;
 

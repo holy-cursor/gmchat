@@ -216,6 +216,8 @@ export class EnhancedP2PService {
             console.log('📋 Enhanced P2P: Adding browser peer:', peer.peerId);
             this.discoveredPeers.add(peer.peerId);
             this.connectToDiscoveredPeer(peer);
+          } else {
+            console.log('📋 Enhanced P2P: Ignoring non-browser peer:', peer.peerId);
           }
         });
         break;
